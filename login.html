@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sign In - Tabitha's Misery</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+    "background": "#0d0d0f", "on-surface": "#f0f0f2", "primary": "#32d74b",
+  }, fontFamily: { body: ["Inter"] } } } }
+</script>
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  .field {
+    width: 100%;
+    background: #1b1b1e !important;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 13px 14px;
+    font-size: 14px;
+    color: #f0f0f2 !important;
+    -webkit-text-fill-color: #f0f0f2 !important;
+    font-family: Inter, sans-serif;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .field::placeholder { -webkit-text-fill-color: rgba(138,138,142,0.5); color: rgba(138,138,142,0.5); }
+  .field:focus { border-color: rgba(50,215,75,0.45); }
+  .field:-webkit-autofill, .field:-webkit-autofill:focus {
+    -webkit-text-fill-color: #f0f0f2 !important;
+    -webkit-box-shadow: 0 0 0 1000px #1b1b1e inset !important;
+    caret-color: #f0f0f2;
+  }
+</style>
+</head>
+<body class="bg-background text-on-surface antialiased min-h-screen" style="display:flex;align-items:center;justify-content:center;padding:24px;">
+
+<div style="width:100%;max-width:380px;">
+
+    <!-- Brand -->
+    <div style="text-align:center;margin-bottom:28px;">
+        <span style="color:#32d74b;font-weight:900;font-size:13px;letter-spacing:0.22em;text-transform:uppercase;">PRECISION</span>
+        <h1 id="auth-title" style="font-size:24px;font-weight:700;color:#f0f0f2;margin-top:14px;line-height:1.1;">Welcome back</h1>
+        <p id="auth-subtitle" style="font-size:13px;color:#8a8a8e;margin-top:6px;">Sign in to your account</p>
+    </div>
+
+    <!-- Card -->
+    <div style="background:#161618;border:1px solid rgba(255,255,255,0.05);border-radius:20px;padding:20px;">
+        <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Email</p>
+        <input id="auth-email" type="email" autocomplete="email" placeholder="you@email.com" class="field" style="margin-bottom:14px;"/>
+
+        <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Password</p>
+        <input id="auth-password" type="password" autocomplete="current-password" placeholder="••••••••" class="field"/>
+
+        <div id="auth-error" style="display:none;font-size:12px;color:#ff6b6b;margin-top:12px;line-height:1.4;"></div>
+
+        <button id="auth-submit" class="active:scale-95 transition-transform" style="width:100%;margin-top:18px;padding:14px;background:#32d74b;border:none;border-radius:13px;color:#00390a;font-size:14px;font-weight:800;letter-spacing:0.02em;cursor:pointer;font-family:Inter,sans-serif;">
+            Sign In
+        </button>
+    </div>
+
+    <!-- Toggle -->
+    <p style="text-align:center;font-size:13px;color:#8a8a8e;margin-top:20px;">
+        <span id="auth-toggle-text">Don't have an account?</span>
+        <button id="auth-toggle" style="color:#32d74b;font-weight:700;background:none;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;">Sign up</button>
+    </p>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+</body></html>

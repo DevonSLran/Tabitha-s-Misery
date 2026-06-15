@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Activity</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "inverse-primary": "#006e1c",
+                    "surface-container-lowest": "#0a0a0c",
+                    "background": "#0d0d0f",
+                    "secondary-fixed": "#d6e3ff",
+                    "tertiary-container": "#ffa2a9",
+                    "secondary": "#aac7ff",
+                    "inverse-surface": "#e4e2e4",
+                    "surface-container-low": "#161618",
+                    "inverse-on-surface": "#303032",
+                    "surface-tint": "#42e355",
+                    "tertiary-fixed-dim": "#ffb2b7",
+                    "outline": "#869581",
+                    "on-secondary-fixed": "#001b3e",
+                    "error-container": "#93000a",
+                    "primary-fixed-dim": "#42e355",
+                    "surface-container-high": "#252528",
+                    "primary-fixed": "#70ff76",
+                    "surface-variant": "#353437",
+                    "on-background": "#e4e2e4",
+                    "tertiary": "#ffcacd",
+                    "on-secondary": "#003064",
+                    "on-secondary-container": "#002957",
+                    "outline-variant": "#252529",
+                    "on-primary-container": "#005814",
+                    "primary": "#32d74b",
+                    "on-primary-fixed": "#002204",
+                    "surface-container": "#1e1e21",
+                    "tertiary-fixed": "#ffdadb",
+                    "on-surface-variant": "#bbcbb5",
+                    "on-secondary-fixed-variant": "#00468d",
+                    "surface-dim": "#0d0d0f",
+                    "on-error": "#690005",
+                    "on-error-container": "#ffdad6",
+                    "on-tertiary-fixed": "#40000e",
+                    "on-tertiary-container": "#9a002e",
+                    "secondary-fixed-dim": "#aac7ff",
+                    "on-primary": "#00390a",
+                    "primary-container": "#32d74b",
+                    "error": "#ffb4ab",
+                    "on-tertiary-fixed-variant": "#91002b",
+                    "on-surface": "#f0f0f2",
+                    "surface-container-highest": "#2e2e32",
+                    "on-tertiary": "#67001c",
+                    "surface": "#0d0d0f",
+                    "surface-bright": "#39393b",
+                    "on-primary-fixed-variant": "#005313",
+                    "secondary-container": "#3e90ff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {},
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+
+    @media (min-width: 768px) {
+      body.has-desktop-sidebar {
+        overflow-x: hidden;
+      }
+
+      body.has-desktop-sidebar [data-main-with-sidebar] {
+        margin-left: var(--sidebar-width, 16rem);
+        width: calc(100vw - var(--sidebar-width, 16rem));
+        max-width: calc(100vw - var(--sidebar-width, 16rem));
+      }
+
+      body.sidebar-collapsed [data-main-with-sidebar] {
+        margin-left: 0;
+        width: 100vw;
+        max-width: 100vw;
+      }
+
+      [data-desktop-sidebar] {
+        transition: transform 0.25s ease;
+      }
+
+      body.sidebar-collapsed [data-desktop-sidebar] {
+        transform: translateX(-100%);
+      }
+    }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface antialiased min-h-screen pb-28">
+<header class="fixed top-0 left-0 right-0 z-50 md:hidden" style="padding-top:env(safe-area-inset-top);background:rgba(13,13,15,0.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.05);">
+    <div class="flex items-center justify-between px-5 py-3">
+        <span style="color:#32d74b;font-weight:900;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;font-family:Inter,sans-serif;">PRECISION</span>
+        <div class="flex items-center gap-2">
+            <button class="flex items-center justify-center active:scale-90 transition-transform" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.05);color:#8a8a8e;">
+                <span class="material-symbols-outlined" style="font-size:19px;">notifications</span>
+            </button>
+            <button class="active:scale-90 transition-transform" style="width:32px;height:32px;border-radius:50%;overflow:hidden;box-shadow:0 0 0 2px rgba(50,215,75,0.3);">
+                <img alt="User Avatar" style="width:100%;height:100%;object-fit:cover;" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDWlmdEo4ZY-aHf5OzdU6LBoBZ4Pc3lLh9MXeXY0dJLe-USS5ZZnpBUzvMnu1ai-uqXd4Ob1kIrDUca6Klr0gmMTGh_u29hz62qniXAWDyRzzcYrioi0FgiOn1ZYHyJ94PEk7dWERbAHbHXfEuVGxl_ahH3UWpJxcYOGqKhAqSv6Hv9AXlgLnjjkXqXnzBYz7EdH1Nys3Ba5dAfmNB_iZS5b7xYkntfG2ZsZj2sTD2bcAXwRPhKpEy14G4hlt0fwNxUttCY-lhrVnY"/>
+            </button>
+        </div>
+    </div>
+</header>
+<div id="sidebar-container"></div>
+<!-- Main Content -->
+<main data-main-with-sidebar class="flex-grow pt-16 pb-28 max-w-2xl w-full mx-auto px-4">
+    <!-- Page header -->
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;gap:12px;">
+        <div>
+            <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Transactions</p>
+            <h1 style="font-size:24px;font-weight:700;color:#f0f0f2;line-height:1.1;">Activity</h1>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <a href="add-transaction.html" class="active:scale-95 transition-transform" style="display:flex;align-items:center;gap:6px;padding:9px 16px;background:#1e1e21;border-radius:22px;border:1px solid rgba(255,255,255,0.07);color:#f0f0f2;text-decoration:none;">
+                <span class="material-symbols-outlined" style="font-size:16px;">add</span>
+                <span style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;font-family:Inter,sans-serif;">Add</span>
+            </a>
+            <a href="add-rule.html" class="active:scale-95 transition-transform" title="Add Rule" style="display:flex;align-items:center;justify-content:center;width:38px;height:38px;background:rgba(50,215,75,0.08);border-radius:50%;border:1px solid rgba(50,215,75,0.15);color:#32d74b;text-decoration:none;">
+                <span class="material-symbols-outlined" style="font-size:18px;">rule</span>
+            </a>
+        </div>
+    </div>
+
+    <div id="month-nav"></div>
+
+    <div id="transaction-list" style="display:flex;flex-direction:column;gap:28px;"></div>
+</main>
+<div id="bottombar-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+</body></html>

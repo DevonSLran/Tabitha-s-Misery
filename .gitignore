@@ -1,0 +1,18 @@
+node_modules/
+logs/
+*.log
+
+# Capacitor/Android build artifacts
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+android/local.properties
+*.apk
+*.aab
+
+# www is a build output of the web app, not source
+www/
+
+# Supabase CLI local state
+supabase/.temp/

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>All Categories - Tabitha's Misery</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "background": "#0d0d0f",
+                        "surface": "#0d0d0f",
+                        "surface-variant": "#353437",
+                        "secondary-fixed": "#d6e3ff",
+                        "primary-fixed": "#70ff76",
+                        "outline-variant": "#252529",
+                        "inverse-on-surface": "#303032",
+                        "on-secondary-container": "#002957",
+                        "on-surface-variant": "#bbcbb5",
+                        "on-secondary-fixed-variant": "#00468d",
+                        "on-tertiary-fixed-variant": "#91002b",
+                        "on-surface": "#f0f0f2",
+                        "on-error": "#690005",
+                        "surface-container-highest": "#2e2e32",
+                        "surface-container": "#1e1e21",
+                        "tertiary-fixed": "#ffdadb",
+                        "inverse-surface": "#e4e2e4",
+                        "on-background": "#e4e2e4",
+                        "on-secondary": "#003064",
+                        "inverse-primary": "#006e1c",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed": "#40000e",
+                        "surface-tint": "#42e355",
+                        "on-error-container": "#ffdad6",
+                        "on-primary-fixed": "#002204",
+                        "secondary-container": "#3e90ff",
+                        "surface-bright": "#39393b",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed-dim": "#ffb2b7",
+                        "outline": "#869581",
+                        "on-primary": "#00390a",
+                        "surface-dim": "#0d0d0f",
+                        "tertiary": "#ffcacd",
+                        "primary": "#32d74b",
+                        "on-primary-fixed-variant": "#005313",
+                        "primary-container": "#32d74b",
+                        "primary-fixed-dim": "#42e355",
+                        "surface-container-low": "#161618",
+                        "secondary-fixed-dim": "#aac7ff",
+                        "on-tertiary": "#67001c",
+                        "surface-container-high": "#252528",
+                        "surface-container-lowest": "#0a0a0c",
+                        "on-secondary-fixed": "#001b3e",
+                        "on-tertiary-container": "#9a002e",
+                        "tertiary-container": "#ffa2a9",
+                        "secondary": "#aac7ff",
+                        "on-primary-container": "#005814"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {},
+                    "fontFamily": {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .fill-icon { font-variation-settings: 'FILL' 1; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #353437; border-radius: 4px; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+
+        #all-categories-list .flex.items-start.justify-between {
+            gap: 0.75rem;
+        }
+
+        #all-categories-list .flex.items-start.justify-between > .flex.items-center.gap-4 {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        #all-categories-list h2,
+        #all-categories-list p {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        #all-categories-list .text-right {
+            max-width: 42vw;
+            flex: 0 0 auto;
+        }
+
+        #all-categories-list .text-right p:first-child {
+            font-size: clamp(0.95rem, 4.2vw, 1.125rem);
+            line-height: 1.2;
+            font-variant-numeric: tabular-nums;
+        }
+
+        @media (min-width: 768px) {
+            body.has-desktop-sidebar {
+                overflow-x: hidden;
+            }
+
+            body.has-desktop-sidebar [data-main-with-sidebar] {
+                margin-left: var(--sidebar-width, 16rem);
+                width: calc(100vw - var(--sidebar-width, 16rem));
+                max-width: calc(100vw - var(--sidebar-width, 16rem));
+            }
+
+            body.sidebar-collapsed [data-main-with-sidebar] {
+                margin-left: 0;
+                width: 100vw;
+                max-width: 100vw;
+            }
+
+            [data-desktop-sidebar] {
+                transition: transform 0.25s ease;
+            }
+
+            body.sidebar-collapsed [data-desktop-sidebar] {
+                transform: translateX(-100%);
+            }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen antialiased flex flex-col pt-14 pb-28 md:pb-0">
+<header class="fixed top-0 left-0 right-0 z-50 md:hidden" style="padding-top:env(safe-area-inset-top);background:rgba(13,13,15,0.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.05);">
+    <div class="flex items-center gap-3 px-4 py-3">
+        <a href="index.html" class="flex items-center justify-center active:scale-90 transition-transform" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.05);color:#8a8a8e;">
+            <span class="material-symbols-outlined" style="font-size:19px;">arrow_back</span>
+        </a>
+        <span style="color:#f0f0f2;font-weight:700;font-size:17px;font-family:Inter,sans-serif;">Categories</span>
+    </div>
+</header>
+<!-- Main Content Canvas -->
+<main id="all-categories-list" data-main-with-sidebar class="flex-grow px-6 py-6 max-w-3xl mx-auto w-full">
+    <div id="month-nav"></div>
+    <div id="category-cards" class="space-y-6"></div>
+    </main>
+<!-- Desktop Sidebar (Hidden on Mobile) -->
+<aside data-desktop-sidebar class="hidden md:flex flex-col w-64 fixed h-full bg-surface-container-lowest border-r border-outline-variant/15 pt-24 px-4 gap-2 z-40">
+<button class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors w-full text-left">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+<span class="font-medium">Dashboard</span>
+</button>
+<button class="flex items-center gap-3 px-4 py-3 rounded-lg text-primary bg-surface-container-high shadow-[0_0_15px_rgba(87,244,100,0.05)] w-full text-left">
+<span class="material-symbols-outlined fill-icon" data-icon="payments" data-weight="fill">payments</span>
+<span class="font-medium">Spending</span>
+</button>
+<button class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors w-full text-left">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="font-medium">Budget</span>
+</button>
+<button class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors w-full text-left">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-medium">Profile</span>
+</button>
+</aside>
+<div id="bottombar-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+</body></html>

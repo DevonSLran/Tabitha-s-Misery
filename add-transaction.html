@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>New Transaction - Tabitha's Misery</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "background": "#0d0d0f",
+          "on-surface": "#f0f0f2",
+          "on-surface-variant": "#8a8a8e",
+          "surface-container-low": "#161618",
+          "surface-container": "#1e1e21",
+          "surface-container-high": "#252528",
+          "primary": "#32d74b",
+          "outline-variant": "#252529"
+        },
+        "fontFamily": { "headline": ["Inter"], "body": ["Inter"], "label": ["Inter"] }
+      }
+    }
+  }
+</script>
+<style>
+  body { font-family: 'Inter', sans-serif; }
+
+  #amount-input {
+    width: 100%;
+    max-width: none;
+    font-size: clamp(2rem, 12vw, 3.4rem);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .form-field {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+    padding: 13px 14px 13px 44px;
+    font-size: 14px;
+    color: #f0f0f2;
+    font-family: Inter, sans-serif;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s, background 0.15s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .form-field:focus {
+    border-color: rgba(50,215,75,0.4);
+    background: rgba(50,215,75,0.03);
+  }
+
+  .form-field::placeholder { color: rgba(138,138,142,0.5); }
+
+  input[type="date"].form-field { color-scheme: dark; }
+
+  @media (min-width: 768px) {
+    body.has-desktop-sidebar { overflow-x: hidden; }
+    body.has-desktop-sidebar [data-main-with-sidebar] {
+      margin-left: var(--sidebar-width, 16rem);
+      width: calc(100vw - var(--sidebar-width, 16rem));
+      max-width: calc(100vw - var(--sidebar-width, 16rem));
+    }
+    body.sidebar-collapsed [data-main-with-sidebar] {
+      margin-left: 0; width: 100vw; max-width: 100vw;
+    }
+    [data-desktop-sidebar] { transition: transform 0.25s ease; }
+    body.sidebar-collapsed [data-desktop-sidebar] { transform: translateX(-100%); }
+  }
+</style>
+</head>
+<body class="bg-background text-on-surface antialiased min-h-screen pb-28">
+
+<div id="sidebar-container"></div>
+
+<header class="fixed top-0 left-0 right-0 z-50 md:hidden" style="padding-top:env(safe-area-inset-top);background:rgba(13,13,15,0.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.05);">
+    <div class="flex items-center gap-3 px-4 py-3">
+        <a href="activity.html" class="flex items-center justify-center active:scale-90 transition-transform" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.05);color:#8a8a8e;">
+            <span class="material-symbols-outlined" style="font-size:19px;">arrow_back</span>
+        </a>
+        <span style="color:#f0f0f2;font-weight:700;font-size:17px;font-family:Inter,sans-serif;">New Transaction</span>
+    </div>
+</header>
+
+<main data-main-with-sidebar class="flex-grow pt-16 pb-8 px-5 max-w-md mx-auto w-full flex flex-col">
+
+    <!-- Expense / Income toggle -->
+    <div style="background:rgba(255,255,255,0.05);border-radius:14px;padding:4px;display:flex;margin-bottom:32px;margin-top:8px;">
+        <button id="expense-tab" type="button" aria-pressed="true"
+                style="flex:1;padding:10px;border-radius:11px;font-size:13px;font-weight:700;font-family:Inter,sans-serif;border:none;cursor:pointer;transition:all 0.15s;background:#32d74b;color:#000;">
+            Expense
+        </button>
+        <button id="income-tab" type="button" aria-pressed="false"
+                style="flex:1;padding:10px;border-radius:11px;font-size:13px;font-weight:700;font-family:Inter,sans-serif;border:none;cursor:pointer;transition:all 0.15s;background:transparent;color:#8a8a8e;">
+            Income
+        </button>
+    </div>
+
+    <!-- Amount display -->
+    <div style="margin-bottom:32px;text-align:center;">
+        <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:14px;font-family:Inter,sans-serif;">Amount</p>
+        <div style="display:flex;align-items:baseline;justify-content:center;gap:10px;padding:0 4px;">
+            <span style="font-size:22px;font-weight:300;color:#8a8a8e;font-family:Inter,sans-serif;flex-shrink:0;padding-bottom:2px;">IDR</span>
+            <input id="amount-input" type="text" inputmode="numeric" placeholder="0" value="150,000"
+                   style="background:transparent;border:none;outline:none;font-weight:800;color:#f0f0f2;text-align:right;font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;caret-color:#32d74b;flex:1;min-width:0;"/>
+        </div>
+        <div style="width:56px;height:1px;background:rgba(50,215,75,0.3);margin:14px auto 0;border-radius:1px;"></div>
+    </div>
+
+    <!-- Form fields -->
+    <div style="display:flex;flex-direction:column;gap:16px;flex:1;">
+
+        <!-- Description -->
+        <div>
+            <p id="description-label" style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;font-family:Inter,sans-serif;">Merchant / Description</p>
+            <div style="position:relative;">
+                <span id="description-icon" class="material-symbols-outlined" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#8a8a8e;pointer-events:none;">storefront</span>
+                <input id="description-input" type="text" placeholder="e.g., Starbucks" class="form-field"/>
+            </div>
+        </div>
+
+        <!-- Date -->
+        <div>
+            <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;font-family:Inter,sans-serif;">Date</p>
+            <div style="position:relative;">
+                <span class="material-symbols-outlined" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#8a8a8e;pointer-events:none;z-index:1;">calendar_today</span>
+                <input type="date" class="form-field"/>
+            </div>
+        </div>
+
+        <!-- Category -->
+        <div>
+            <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;font-family:Inter,sans-serif;">Category</p>
+            <div style="position:relative;">
+                <span class="material-symbols-outlined" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#8a8a8e;pointer-events:none;z-index:1;">category</span>
+                <select id="category-select" class="form-field" style="padding-right:40px;">
+                    <option value="food">Food &amp; Dining</option>
+                    <option value="transport">Transport</option>
+                    <option value="entertainment">Entertainment</option>
+                    <option value="shopping">Shopping</option>
+                    <option value="bills">Bills &amp; Utilities</option>
+                </select>
+                <span class="material-symbols-outlined" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#8a8a8e;pointer-events:none;">expand_more</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Submit -->
+    <div style="margin-top:32px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.05);">
+        <button id="submit-transaction" type="button" class="active:scale-[0.98] transition-transform"
+                style="width:100%;background:#32d74b;color:#000;font-size:15px;font-weight:700;font-family:Inter,sans-serif;padding:16px;border-radius:14px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 0 24px rgba(50,215,75,0.22);">
+            <span id="submit-icon" class="material-symbols-outlined" style="font-size:18px;font-variation-settings:'FILL' 1;">add_circle</span>
+            <span id="submit-text">Add Expense</span>
+        </button>
+    </div>
+
+</main>
+
+<div id="bottombar-container"></div>
+
+<script>
+    const expenseTab = document.getElementById("expense-tab");
+    const incomeTab = document.getElementById("income-tab");
+    const categorySelect = document.getElementById("category-select");
+    const descriptionLabel = document.getElementById("description-label");
+    const descriptionInput = document.getElementById("description-input");
+    const descriptionIcon = document.getElementById("description-icon");
+    const submitText = document.getElementById("submit-text");
+    const submitIcon = document.getElementById("submit-icon");
+    const amountInput = document.getElementById("amount-input");
+
+    const expenseCategories = [
+        { value: "food", label: "Food & Dining" },
+        { value: "transport", label: "Transport" },
+        { value: "entertainment", label: "Entertainment" },
+        { value: "shopping", label: "Shopping" },
+        { value: "bills", label: "Bills & Utilities" }
+    ];
+
+    const incomeCategories = [
+        { value: "salary", label: "Salary" },
+        { value: "freelance", label: "Freelance" },
+        { value: "bonus", label: "Bonus" },
+        { value: "investment", label: "Investment" },
+        { value: "other_income", label: "Other Income" }
+    ];
+
+    const ACTIVE = "flex:1;padding:10px;border-radius:11px;font-size:13px;font-weight:700;font-family:Inter,sans-serif;border:none;cursor:pointer;transition:all 0.15s;background:#32d74b;color:#000;";
+    const INACTIVE = "flex:1;padding:10px;border-radius:11px;font-size:13px;font-weight:700;font-family:Inter,sans-serif;border:none;cursor:pointer;transition:all 0.15s;background:transparent;color:#8a8a8e;";
+
+    function setTabStyles(active, inactive) {
+        active.style.cssText = ACTIVE;
+        active.setAttribute("aria-pressed", "true");
+        inactive.style.cssText = INACTIVE;
+        inactive.setAttribute("aria-pressed", "false");
+    }
+
+    function setCategoryOptions(options) {
+        categorySelect.innerHTML = options
+            .map(o => `<option value="${o.value}">${o.label}</option>`)
+            .join("");
+    }
+
+    function formatAmountWithSeparator(raw) {
+        if (!raw) return "";
+        return new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(Number(raw));
+    }
+
+    function adjustAmountFontSize(raw) {
+        const n = raw.length;
+        if (n <= 5)  { amountInput.style.fontSize = "3.4rem"; return; }
+        if (n <= 7)  { amountInput.style.fontSize = "3rem";   return; }
+        if (n <= 9)  { amountInput.style.fontSize = "2.6rem"; return; }
+        if (n <= 12) { amountInput.style.fontSize = "2.3rem"; return; }
+        amountInput.style.fontSize = "2rem";
+    }
+
+    function updateAmountInput() {
+        const raw = amountInput.value.replace(/\D/g, "").slice(0, 15);
+        amountInput.value = formatAmountWithSeparator(raw);
+        adjustAmountFontSize(raw);
+    }
+
+    function setMode(mode) {
+        if (mode === "income") {
+            setTabStyles(incomeTab, expenseTab);
+            setCategoryOptions(incomeCategories);
+            descriptionLabel.textContent = "Source / Description";
+            descriptionInput.placeholder = "e.g., Salary ACME Corp";
+            descriptionIcon.textContent = "payments";
+            submitText.textContent = "Add Income";
+            submitIcon.textContent = "south_west";
+        } else {
+            setTabStyles(expenseTab, incomeTab);
+            setCategoryOptions(expenseCategories);
+            descriptionLabel.textContent = "Merchant / Description";
+            descriptionInput.placeholder = "e.g., Starbucks";
+            descriptionIcon.textContent = "storefront";
+            submitText.textContent = "Add Expense";
+            submitIcon.textContent = "add_circle";
+        }
+    }
+
+    expenseTab.addEventListener("click", () => setMode("expense"));
+    incomeTab.addEventListener("click", () => setMode("income"));
+    amountInput.addEventListener("input", updateAmountInput);
+
+    setMode("expense");
+    updateAmountInput();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+</body>
+</html>

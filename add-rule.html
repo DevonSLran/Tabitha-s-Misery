@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Add Rule - Tabitha's Misery</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "background": "#0d0d0f",
+          "on-surface": "#f0f0f2",
+          "on-surface-variant": "#8a8a8e",
+          "surface-container-low": "#161618",
+          "surface-container": "#1e1e21",
+          "surface-container-high": "#252528",
+          "primary": "#32d74b",
+          "outline-variant": "#252529"
+        },
+        "fontFamily": { "headline": ["Inter"], "body": ["Inter"], "label": ["Inter"] }
+      }
+    }
+  }
+</script>
+<style>
+  body { font-family: 'Inter', sans-serif; }
+
+  .form-field {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+    padding: 13px 14px 13px 44px;
+    font-size: 14px;
+    color: #f0f0f2;
+    font-family: Inter, sans-serif;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s, background 0.15s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .form-field:focus {
+    border-color: rgba(50,215,75,0.4);
+    background: rgba(50,215,75,0.03);
+  }
+
+  .form-field::placeholder { color: rgba(138,138,142,0.5); }
+
+  @media (min-width: 768px) {
+    body.has-desktop-sidebar { overflow-x: hidden; }
+    body.has-desktop-sidebar [data-main-with-sidebar] {
+      margin-left: var(--sidebar-width, 16rem);
+      width: calc(100vw - var(--sidebar-width, 16rem));
+      max-width: calc(100vw - var(--sidebar-width, 16rem));
+    }
+    body.sidebar-collapsed [data-main-with-sidebar] {
+      margin-left: 0; width: 100vw; max-width: 100vw;
+    }
+    [data-desktop-sidebar] { transition: transform 0.25s ease; }
+    body.sidebar-collapsed [data-desktop-sidebar] { transform: translateX(-100%); }
+  }
+</style>
+</head>
+<body class="bg-background text-on-surface antialiased min-h-screen pb-28">
+
+<div id="sidebar-container"></div>
+
+<header class="fixed top-0 left-0 right-0 z-50 md:hidden" style="padding-top:env(safe-area-inset-top);background:rgba(13,13,15,0.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.05);">
+    <div class="flex items-center gap-3 px-4 py-3">
+        <a href="activity.html" class="flex items-center justify-center active:scale-90 transition-transform" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.05);color:#8a8a8e;">
+            <span class="material-symbols-outlined" style="font-size:19px;">arrow_back</span>
+        </a>
+        <span style="color:#f0f0f2;font-weight:700;font-size:17px;font-family:Inter,sans-serif;">Add Rule</span>
+    </div>
+</header>
+
+<main data-main-with-sidebar class="flex-grow pt-16 pb-8 px-5 max-w-md mx-auto w-full">
+
+    <!-- Page heading -->
+    <div style="margin-bottom:24px;margin-top:8px;">
+        <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Categorization</p>
+        <h1 style="font-size:24px;font-weight:700;color:#f0f0f2;line-height:1.1;">Add Rule</h1>
+    </div>
+
+    <!-- Info hint -->
+    <div style="background:rgba(50,215,75,0.05);border:1px solid rgba(50,215,75,0.12);border-radius:14px;padding:14px 16px;margin-bottom:28px;display:flex;align-items:flex-start;gap:12px;">
+        <span class="material-symbols-outlined" style="font-size:17px;color:#32d74b;flex-shrink:0;margin-top:1px;font-variation-settings:'FILL' 1;">info</span>
+        <p style="font-size:12px;color:#8a8a8e;line-height:1.55;font-family:Inter,sans-serif;margin:0;">Rules automatically categorize future transactions that match the merchant keyword.</p>
+    </div>
+
+    <!-- Form fields -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
+        <!-- Keyword -->
+        <div>
+            <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;font-family:Inter,sans-serif;">Merchant Keyword</p>
+            <div style="position:relative;">
+                <span class="material-symbols-outlined" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#8a8a8e;pointer-events:none;">search</span>
+                <input id="keyword" type="text" placeholder="e.g., GOFOOD, STARBUCKS" class="form-field"/>
+            </div>
+        </div>
+
+        <!-- Category -->
+        <div>
+            <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;font-family:Inter,sans-serif;">Category</p>
+            <div style="position:relative;">
+                <span class="material-symbols-outlined" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#8a8a8e;pointer-events:none;z-index:1;">category</span>
+                <select id="category" class="form-field" style="padding-right:40px;color-scheme:dark;">
+                    <option disabled selected value="">Select a category</option>
+                    <option value="food">Food &amp; Dining</option>
+                    <option value="transport">Transportation</option>
+                    <option value="health">Health &amp; Wellness</option>
+                    <option value="utilities">Utilities</option>
+                    <option value="entertainment">Entertainment</option>
+                    <option value="shopping">Shopping</option>
+                    <option value="bills">Bills</option>
+                </select>
+                <span class="material-symbols-outlined" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#8a8a8e;pointer-events:none;">expand_more</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Submit -->
+    <div style="margin-top:32px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.05);">
+        <button type="submit" class="active:scale-[0.98] transition-transform"
+                style="width:100%;background:#32d74b;color:#000;font-size:15px;font-weight:700;font-family:Inter,sans-serif;padding:16px;border-radius:14px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 0 24px rgba(50,215,75,0.22);">
+            <span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:'FILL' 1;">save</span>
+            Save Rule
+        </button>
+    </div>
+
+</main>
+
+<div id="bottombar-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+</body>
+</html>

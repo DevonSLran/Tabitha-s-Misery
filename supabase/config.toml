@@ -1,0 +1,6 @@
+project_id = "oyexlcmrrhdvsqfbjoif"
+
+# The app invokes this function with the existing Supabase anon key in the
+# Authorization header, so JWT verification stays on (blocks anonymous callers).
+[functions.import-bca-emails]
+verify_jwt = true

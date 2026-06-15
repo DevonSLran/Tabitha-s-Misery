@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Budget - Tabitha's Misery</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "inverse-primary": "#006e1c",
+          "surface-container-lowest": "#0a0a0c",
+          "background": "#0d0d0f",
+          "secondary": "#aac7ff",
+          "inverse-surface": "#e4e2e4",
+          "surface-container-low": "#161618",
+          "inverse-on-surface": "#303032",
+          "surface-tint": "#42e355",
+          "outline": "#869581",
+          "on-secondary-fixed": "#001b3e",
+          "error-container": "#93000a",
+          "surface-container-high": "#252528",
+          "surface-variant": "#353437",
+          "on-background": "#e4e2e4",
+          "on-secondary": "#003064",
+          "outline-variant": "#252529",
+          "primary": "#32d74b",
+          "on-primary-fixed": "#002204",
+          "surface-container": "#1e1e21",
+          "on-surface-variant": "#8a8a8e",
+          "on-primary": "#00390a",
+          "primary-container": "#32d74b",
+          "error": "#ffb4ab",
+          "on-surface": "#f0f0f2",
+          "surface-container-highest": "#2e2e32",
+          "surface": "#0d0d0f",
+          "surface-bright": "#39393b",
+          "secondary-container": "#3e90ff"
+        },
+        "fontFamily": { "headline": ["Inter"], "body": ["Inter"], "label": ["Inter"] }
+      }
+    }
+  }
+</script>
+<style>
+  body { font-family: 'Inter', sans-serif; }
+
+  @media (min-width: 768px) {
+    body.has-desktop-sidebar { overflow-x: hidden; }
+    body.has-desktop-sidebar [data-main-with-sidebar] {
+      margin-left: var(--sidebar-width, 16rem);
+      width: calc(100vw - var(--sidebar-width, 16rem));
+      max-width: calc(100vw - var(--sidebar-width, 16rem));
+    }
+    body.sidebar-collapsed [data-main-with-sidebar] {
+      margin-left: 0; width: 100vw; max-width: 100vw;
+    }
+    [data-desktop-sidebar] { transition: transform 0.25s ease; }
+    body.sidebar-collapsed [data-desktop-sidebar] { transform: translateX(-100%); }
+  }
+
+  /* Bottom sheet animation */
+  #budget-sheet {
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    transform: translateY(100%);
+  }
+  #budget-sheet.open {
+    transform: translateY(0);
+  }
+  #sheet-backdrop {
+    transition: opacity 0.3s ease;
+    opacity: 0;
+    pointer-events: none;
+  }
+  #sheet-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .budget-input {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+    padding: 13px 14px 13px 44px;
+    font-size: 14px;
+    color: #f0f0f2;
+    font-family: Inter, sans-serif;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .budget-input:focus { border-color: rgba(50,215,75,0.4); }
+  .budget-input::placeholder { color: rgba(138,138,142,0.5); }
+</style>
+</head>
+<body class="bg-background text-on-surface antialiased min-h-screen pb-28">
+
+<div id="sidebar-container"></div>
+
+<header class="fixed top-0 left-0 right-0 z-50 md:hidden" style="padding-top:env(safe-area-inset-top);background:rgba(13,13,15,0.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.05);">
+    <div class="flex items-center justify-between px-5 py-3">
+        <span style="color:#32d74b;font-weight:900;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;font-family:Inter,sans-serif;">PRECISION</span>
+        <div class="flex items-center gap-2">
+            <button class="flex items-center justify-center active:scale-90 transition-transform" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.05);color:#8a8a8e;">
+                <span class="material-symbols-outlined" style="font-size:19px;">notifications</span>
+            </button>
+            <button class="active:scale-90 transition-transform" style="width:32px;height:32px;border-radius:50%;overflow:hidden;box-shadow:0 0 0 2px rgba(50,215,75,0.3);">
+                <img alt="User Avatar" style="width:100%;height:100%;object-fit:cover;" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDWlmdEo4ZY-aHf5OzdU6LBoBZ4Pc3lLh9MXeXY0dJLe-USS5ZZnpBUzvMnu1ai-uqXd4Ob1kIrDUca6Klr0gmMTGh_u29hz62qniXAWDyRzzcYrioi0FgiOn1ZYHyJ94PEk7dWERbAHbHXfEuVGxl_ahH3UWpJxcYOGqKhAqSv6Hv9AXlgLnjjkXqXnzBYz7EdH1Nys3Ba5dAfmNB_iZS5b7xYkntfG2ZsZj2sTD2bcAXwRPhKpEy14G4hlt0fwNxUttCY-lhrVnY"/>
+            </button>
+        </div>
+    </div>
+</header>
+
+<main data-main-with-sidebar class="flex-grow pt-16 pb-28 max-w-2xl w-full mx-auto px-4">
+
+    <!-- Page heading -->
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;">
+        <div>
+            <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;font-family:Inter,sans-serif;">Monthly Spending</p>
+            <h1 style="font-size:24px;font-weight:700;color:#f0f0f2;line-height:1.1;">Budget</h1>
+        </div>
+        <button id="set-budget-btn" class="active:scale-95 transition-transform" style="display:flex;align-items:center;gap:6px;padding:9px 16px;background:#1e1e21;border-radius:22px;border:1px solid rgba(255,255,255,0.07);color:#f0f0f2;cursor:pointer;font-family:Inter,sans-serif;">
+            <span class="material-symbols-outlined" style="font-size:16px;">add</span>
+            <span style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">Set Budget</span>
+        </button>
+    </div>
+
+    <!-- Hero summary card -->
+    <div style="background:#161618;border-radius:20px;padding:20px;border:1px solid rgba(255,255,255,0.05);margin-bottom:24px;position:relative;overflow:hidden;">
+        <!-- Subtle green glow -->
+        <div style="position:absolute;top:-40px;right:-40px;width:120px;height:120px;background:radial-gradient(circle,rgba(50,215,75,0.08) 0%,transparent 70%);pointer-events:none;"></div>
+
+        <!-- Month navigation -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+            <button id="prev-month-btn" class="active:scale-90 transition-transform" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.05);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#8a8a8e;">
+                <span class="material-symbols-outlined" style="font-size:16px;">chevron_left</span>
+            </button>
+            <span id="budget-month-label" style="font-size:13px;font-weight:600;color:#f0f0f2;font-family:Inter,sans-serif;">June 2026</span>
+            <button id="next-month-btn" class="active:scale-90 transition-transform" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.05);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#8a8a8e;">
+                <span class="material-symbols-outlined" style="font-size:16px;">chevron_right</span>
+            </button>
+        </div>
+
+        <!-- Spent amount -->
+        <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;font-family:Inter,sans-serif;">Total Spent</p>
+        <p id="hero-spent" style="font-size:30px;font-weight:800;font-family:Inter,sans-serif;line-height:1;margin-bottom:4px;background:linear-gradient(to right,#5de477,#32d74b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Rp 2.847.500</p>
+        <p id="hero-budget-label" style="font-size:12px;color:#8a8a8e;margin-bottom:16px;font-family:Inter,sans-serif;">of Rp 5.000.000 budgeted</p>
+
+        <!-- Overall progress bar -->
+        <div style="height:5px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden;margin-bottom:12px;">
+            <div id="hero-progress-bar" style="height:100%;width:56.95%;background:linear-gradient(to right,#32d74b,#5de477);border-radius:3px;transition:width 0.6s ease;"></div>
+        </div>
+
+        <!-- Status row -->
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span id="hero-status-badge" style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:#32d74b;background:rgba(50,215,75,0.1);border-radius:20px;padding:4px 10px;font-family:Inter,sans-serif;">
+                <span class="material-symbols-outlined" style="font-size:12px;font-variation-settings:'FILL' 1;">check_circle</span>
+                On Track
+            </span>
+            <span id="hero-pct-label" style="font-size:11px;font-weight:600;color:#8a8a8e;font-family:Inter,sans-serif;">57% used</span>
+        </div>
+    </div>
+
+    <!-- Category budgets -->
+    <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;font-family:Inter,sans-serif;">Category Budgets</p>
+
+    <!-- Populated state (rendered dynamically by setupBudgetPage() in app.js) -->
+    <div id="budget-categories-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+
+    <!-- Empty state (shown when no budgets set) -->
+    <div id="budget-empty-state" style="display:none;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;">
+        <div style="width:64px;height:64px;border-radius:20px;background:rgba(50,215,75,0.08);display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
+            <span class="material-symbols-outlined" style="font-size:28px;color:#32d74b;font-variation-settings:'FILL' 1;">pie_chart</span>
+        </div>
+        <p style="font-size:16px;font-weight:700;color:#f0f0f2;margin-bottom:6px;font-family:Inter,sans-serif;">No budgets yet</p>
+        <p style="font-size:13px;color:#8a8a8e;line-height:1.5;max-width:220px;font-family:Inter,sans-serif;">Set a monthly spending limit for each category to track your habits.</p>
+        <button id="empty-set-budget-btn" class="active:scale-95 transition-transform" style="margin-top:24px;display:flex;align-items:center;gap:8px;padding:12px 20px;background:#32d74b;border-radius:14px;border:none;cursor:pointer;color:#000;font-size:13px;font-weight:700;font-family:Inter,sans-serif;">
+            <span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1;">add_circle</span>
+            Set First Budget
+        </button>
+    </div>
+
+</main>
+
+<!-- Bottom sheet backdrop -->
+<div id="sheet-backdrop" class="fixed inset-0 z-[60]" style="background:rgba(0,0,0,0.6);"></div>
+
+<!-- Set Budget bottom sheet -->
+<div id="budget-sheet" class="fixed bottom-0 left-0 right-0 z-[70]" style="background:#161618;border-radius:24px 24px 0 0;border-top:1px solid rgba(255,255,255,0.07);padding:0 20px;padding-bottom:max(env(safe-area-inset-bottom),24px);">
+    <!-- Drag handle -->
+    <div style="display:flex;justify-content:center;padding:12px 0 20px;">
+        <div style="width:36px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;"></div>
+    </div>
+
+    <p style="font-size:17px;font-weight:700;color:#f0f0f2;margin-bottom:20px;font-family:Inter,sans-serif;">Set Budget</p>
+
+    <!-- Category select -->
+    <div style="margin-bottom:16px;">
+        <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;font-family:Inter,sans-serif;">Category</p>
+        <div style="position:relative;">
+            <span class="material-symbols-outlined" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#8a8a8e;pointer-events:none;z-index:1;">category</span>
+            <select id="sheet-category" class="budget-input" style="padding-right:40px;color-scheme:dark;">
+                <option value="">Select category</option>
+                <option value="FOOD">Food &amp; Dining</option>
+                <option value="TRANSPORT">Transport</option>
+                <option value="ENTERTAINMENT">Entertainment</option>
+                <option value="SHOPPING">Shopping</option>
+                <option value="BILLS">Bills &amp; Utilities</option>
+                <option value="OTHER">Other</option>
+            </select>
+            <span class="material-symbols-outlined" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#8a8a8e;pointer-events:none;">expand_more</span>
+        </div>
+    </div>
+
+    <!-- Monthly limit input -->
+    <div style="margin-bottom:16px;">
+        <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;font-family:Inter,sans-serif;">Monthly Limit</p>
+        <div style="position:relative;">
+            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:600;color:#8a8a8e;font-family:Inter,sans-serif;pointer-events:none;">IDR</span>
+            <input id="sheet-amount" type="text" inputmode="numeric" placeholder="0" class="budget-input" style="padding-left:52px;"/>
+        </div>
+    </div>
+
+    <!-- Apply until input -->
+    <div style="margin-bottom:28px;">
+        <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;font-family:Inter,sans-serif;">Apply Until</p>
+        <div style="position:relative;">
+            <input id="sheet-until" type="month" class="budget-input" style="color-scheme:dark;"/>
+        </div>
+    </div>
+
+    <!-- Save button -->
+    <button id="sheet-save-btn" class="active:scale-[0.98] transition-transform" style="width:100%;background:#32d74b;color:#000;font-size:15px;font-weight:700;font-family:Inter,sans-serif;padding:16px;border-radius:14px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 0 24px rgba(50,215,75,0.22);">
+        <span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:'FILL' 1;">save</span>
+        Save Budget
+    </button>
+
+    <!-- Delete button (shown only when editing an existing budget) -->
+    <button id="sheet-delete-btn" class="active:scale-[0.98] transition-transform" style="display:none;width:100%;margin-top:10px;background:rgba(255,75,75,0.08);color:#ff6b6b;font-size:14px;font-weight:700;font-family:Inter,sans-serif;padding:14px;border-radius:14px;border:1px solid rgba(255,75,75,0.18);cursor:pointer;align-items:center;justify-content:center;gap:8px;">
+        <span class="material-symbols-outlined" style="font-size:18px;">delete</span>
+        Remove Budget
+    </button>
+</div>
+
+<div id="bottombar-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+
+<script>
+    // Sheet open/close (save logic lives in setupBudgetPage() in app.js)
+    const sheet = document.getElementById('budget-sheet');
+    const backdrop = document.getElementById('sheet-backdrop');
+
+    function openSheet() {
+        sheet.classList.add('open');
+        backdrop.classList.add('open');
+    }
+
+    function closeSheet() {
+        sheet.classList.remove('open');
+        backdrop.classList.remove('open');
+    }
+
+    document.getElementById('set-budget-btn').addEventListener('click', () => openSheet());
+    const emptyBtn = document.getElementById('empty-set-budget-btn');
+    if (emptyBtn) emptyBtn.addEventListener('click', () => openSheet());
+    backdrop.addEventListener('click', closeSheet);
+
+    // Sheet amount formatting
+    const sheetAmount = document.getElementById('sheet-amount');
+    sheetAmount.addEventListener('input', () => {
+        const raw = sheetAmount.value.replace(/\D/g, '').slice(0, 15);
+        sheetAmount.value = raw ? new Intl.NumberFormat('id-ID').format(Number(raw)) : '';
+    });
+</script>
+</body>
+</html>
