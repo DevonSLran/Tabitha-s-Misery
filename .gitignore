@@ -11,6 +11,13 @@ android/local.properties
 *.apk
 *.aab
 
+# Android release signing — NEVER commit these.
+# Losing the keystore means never being able to update the app again;
+# leaking it means anyone can publish updates as you.
+android/keystore.properties
+*.jks
+*.keystore
+
 # www is a build output of the web app, not source
 www/
 

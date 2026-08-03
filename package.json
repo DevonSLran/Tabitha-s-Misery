@@ -7,7 +7,9 @@
     "copy": "mkdir -p www/vendor && cp *.html app.js www/ && cp vendor/* www/vendor/",
     "sync": "npm run copy && cap sync android",
     "open": "cap open android",
-    "build:android": "npm run copy && cap sync android && cap build android"
+    "build:android": "npm run copy && cap sync android && cap build android",
+    "build:apk": "npm run sync && cd android && ./gradlew assembleRelease",
+    "build:aab": "npm run sync && cd android && ./gradlew bundleRelease"
   },
   "keywords": [],
   "author": "",

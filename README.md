@@ -62,3 +62,62 @@ npm run build:android # build the Android app
 The `supabase/` directory contains the database schema (migrations) and the
 `import-bca-emails` edge function. Use the [Supabase CLI](https://supabase.com/docs/guides/cli)
 to apply migrations and deploy functions to your project.
+
+## Deploying
+
+### Web
+
+The web app is served from GitHub Pages at
+<https://devonslran.github.io/Tabitha-s-Misery/>, built from `main` at the repo
+root. Pushing to `main` redeploys it; no build step runs.
+
+Third-party libraries are vendored in `vendor/` rather than loaded from a CDN,
+so the app works without a network after first load.
+
+### Releasing the Android app
+
+**One-time setup.** Generate a signing keystore. Keep it outside the repo:
+
+```bash
+mkdir -p ~/.android-keystores
+keytool -genkeypair -v \
+  -keystore ~/.android-keystores/tabitha-release.jks \
+  -alias tabitha \
+  -keyalg RSA -keysize 4096 -validity 10000 \
+  -storetype PKCS12
+```
+
+Then copy `android/keystore.properties.example` to
+`android/keystore.properties` and fill in the passwords you just chose. Both the
+`.jks` and `keystore.properties` are gitignored.
+
+> **Back the `.jks` up somewhere off this machine.** It cannot be regenerated.
+> Without it, Android treats a rebuilt app as a different app — existing users
+> can't update, they'd have to uninstall and lose local state. Anyone who
+> obtains it can publish updates as you.
+
+**Each release:**
+
+1. Bump `versionCode` (and usually `versionName`) in `android/app/build.gradle`.
+   Android refuses to install an update whose `versionCode` isn't higher.
+2. Build:
+   ```bash
+   npm run build:apk   # → android/app/build/outputs/apk/release/app-release.apk
+   ```
+   This runs `npm run sync` first, so the Android assets pick up any web changes.
+   Use `npm run build:aab` instead if publishing to the Play Store.
+3. Verify it's signed with your key, not the debug key:
+   ```bash
+   ~/Android/Sdk/build-tools/37.0.0/apksigner verify --print-certs \
+     android/app/build/outputs/apk/release/app-release.apk
+   ```
+   The certificate must show your details — **not** `CN=Android Debug`.
+4. Publish:
+   ```bash
+   gh release create v1.0 \
+     android/app/build/outputs/apk/release/app-release.apk \
+     --title "v1.0" --notes "First release"
+   ```
+
+Installing an APK from outside the Play Store requires enabling "install from
+unknown sources" on the device.
