@@ -64,6 +64,28 @@
 
   input[type="date"].form-field { color-scheme: dark; }
 
+  .calc-key {
+    padding: 14px 0;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.06);
+    color: #f0f0f2;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: Inter, sans-serif;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.15s;
+  }
+  .calc-key:active { transform: scale(0.94); background: rgba(255,255,255,0.09); }
+  .calc-op { color: #32d74b; }
+  .calc-apply {
+    background: #32d74b;
+    border-color: transparent;
+    color: #00390a;
+    font-weight: 800;
+  }
+  .calc-apply:active { background: #2bc243; }
+
   @media (min-width: 768px) {
     body.has-desktop-sidebar { overflow-x: hidden; }
     body.has-desktop-sidebar [data-main-with-sidebar] {
@@ -115,6 +137,45 @@
                    style="background:transparent;border:none;outline:none;font-weight:800;color:#f0f0f2;text-align:right;font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;caret-color:#32d74b;flex:1;min-width:0;"/>
         </div>
         <div style="width:56px;height:1px;background:rgba(50,215,75,0.3);margin:14px auto 0;border-radius:1px;"></div>
+
+        <!-- Calculator toggle -->
+        <button id="calc-toggle" type="button" class="active:scale-95 transition-transform"
+                style="margin:14px auto 0;display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:20px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.07);color:#8a8a8e;font-size:12px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;">
+            <span class="material-symbols-outlined" style="font-size:15px;">calculate</span>
+            <span id="calc-toggle-text">Calculator</span>
+        </button>
+    </div>
+
+    <!-- Calculator panel: builds an expression and writes the result into the
+         amount field above. Hidden until the toggle is pressed. -->
+    <div id="calc-panel" style="display:none;background:#161618;border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:14px;margin-bottom:28px;">
+        <div style="min-height:34px;display:flex;align-items:center;justify-content:flex-end;padding:0 6px 10px;">
+            <span id="calc-expression" style="font-size:17px;font-weight:600;color:#f0f0f2;font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;word-break:break-all;text-align:right;">0</span>
+        </div>
+        <div id="calc-keys" style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;">
+            <button type="button" data-calc="7" class="calc-key">7</button>
+            <button type="button" data-calc="8" class="calc-key">8</button>
+            <button type="button" data-calc="9" class="calc-key">9</button>
+            <button type="button" data-calc="÷" class="calc-key calc-op">÷</button>
+
+            <button type="button" data-calc="4" class="calc-key">4</button>
+            <button type="button" data-calc="5" class="calc-key">5</button>
+            <button type="button" data-calc="6" class="calc-key">6</button>
+            <button type="button" data-calc="×" class="calc-key calc-op">×</button>
+
+            <button type="button" data-calc="1" class="calc-key">1</button>
+            <button type="button" data-calc="2" class="calc-key">2</button>
+            <button type="button" data-calc="3" class="calc-key">3</button>
+            <button type="button" data-calc="-" class="calc-key calc-op">−</button>
+
+            <button type="button" data-calc="0" class="calc-key">0</button>
+            <button type="button" data-calc="000" class="calc-key">000</button>
+            <button type="button" data-calc="back" class="calc-key">⌫</button>
+            <button type="button" data-calc="+" class="calc-key calc-op">+</button>
+
+            <button type="button" data-calc="clear" class="calc-key" style="grid-column:span 2;">Clear</button>
+            <button type="button" data-calc="apply" class="calc-key calc-apply" style="grid-column:span 2;">= Use</button>
+        </div>
     </div>
 
     <!-- Form fields -->
@@ -143,12 +204,9 @@
             <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;font-family:Inter,sans-serif;">Category</p>
             <div style="position:relative;">
                 <span class="material-symbols-outlined" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#8a8a8e;pointer-events:none;z-index:1;">category</span>
+                <!-- Filled from the categories table by setupAddTransaction(). -->
                 <select id="category-select" class="form-field" style="padding-right:40px;">
-                    <option value="food">Food &amp; Dining</option>
-                    <option value="transport">Transport</option>
-                    <option value="entertainment">Entertainment</option>
-                    <option value="shopping">Shopping</option>
-                    <option value="bills">Bills &amp; Utilities</option>
+                    <option value="">Uncategorized</option>
                 </select>
                 <span class="material-symbols-outlined" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#8a8a8e;pointer-events:none;">expand_more</span>
             </div>
@@ -172,7 +230,6 @@
 <script>
     const expenseTab = document.getElementById("expense-tab");
     const incomeTab = document.getElementById("income-tab");
-    const categorySelect = document.getElementById("category-select");
     const descriptionLabel = document.getElementById("description-label");
     const descriptionInput = document.getElementById("description-input");
     const descriptionIcon = document.getElementById("description-icon");
@@ -180,21 +237,9 @@
     const submitIcon = document.getElementById("submit-icon");
     const amountInput = document.getElementById("amount-input");
 
-    const expenseCategories = [
-        { value: "food", label: "Food & Dining" },
-        { value: "transport", label: "Transport" },
-        { value: "entertainment", label: "Entertainment" },
-        { value: "shopping", label: "Shopping" },
-        { value: "bills", label: "Bills & Utilities" }
-    ];
-
-    const incomeCategories = [
-        { value: "salary", label: "Salary" },
-        { value: "freelance", label: "Freelance" },
-        { value: "bonus", label: "Bonus" },
-        { value: "investment", label: "Investment" },
-        { value: "other_income", label: "Other Income" }
-    ];
+    // The category dropdown is filled from the user's own categories table by
+    // setupAddTransaction() in app.js — not hardcoded here, so a category added
+    // on the Categorization page shows up immediately.
 
     const ACTIVE = "flex:1;padding:10px;border-radius:11px;font-size:13px;font-weight:700;font-family:Inter,sans-serif;border:none;cursor:pointer;transition:all 0.15s;background:#32d74b;color:#000;";
     const INACTIVE = "flex:1;padding:10px;border-radius:11px;font-size:13px;font-weight:700;font-family:Inter,sans-serif;border:none;cursor:pointer;transition:all 0.15s;background:transparent;color:#8a8a8e;";
@@ -204,12 +249,6 @@
         active.setAttribute("aria-pressed", "true");
         inactive.style.cssText = INACTIVE;
         inactive.setAttribute("aria-pressed", "false");
-    }
-
-    function setCategoryOptions(options) {
-        categorySelect.innerHTML = options
-            .map(o => `<option value="${o.value}">${o.label}</option>`)
-            .join("");
     }
 
     function formatAmountWithSeparator(raw) {
@@ -235,7 +274,6 @@
     function setMode(mode) {
         if (mode === "income") {
             setTabStyles(incomeTab, expenseTab);
-            setCategoryOptions(incomeCategories);
             descriptionLabel.textContent = "Source / Description";
             descriptionInput.placeholder = "e.g., Salary ACME Corp";
             descriptionIcon.textContent = "payments";
@@ -243,7 +281,6 @@
             submitIcon.textContent = "south_west";
         } else {
             setTabStyles(expenseTab, incomeTab);
-            setCategoryOptions(expenseCategories);
             descriptionLabel.textContent = "Merchant / Description";
             descriptionInput.placeholder = "e.g., Starbucks";
             descriptionIcon.textContent = "storefront";

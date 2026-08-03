@@ -991,10 +991,166 @@ function applyEditLabels() {
     document.title = "Edit Transaction - Tabitha's Misery";
 }
 
+// --- AMOUNT CALCULATOR (add-transaction.html) ---
+// Tiny arithmetic evaluator for the amount keypad: + - * / with the usual
+// precedence. Deliberately not eval() — this parses a fixed grammar and returns
+// null for anything it doesn't fully understand, so a malformed expression can
+// never quietly become a wrong amount.
+function evalExpression(expr) {
+    const src = String(expr || '').replace(/[×x]/g, '*').replace(/[÷]/g, '/').replace(/\s+/g, '');
+    if (!src) return null;
+    if (!/^[0-9.+\-*/]+$/.test(src)) return null;
+
+    // Tokenize into numbers and operators.
+    const tokens = [];
+    let num = '';
+    for (let i = 0; i < src.length; i++) {
+        const ch = src[i];
+        if (/[0-9.]/.test(ch)) { num += ch; continue; }
+        // A +/- at the very start signs the first number. Anywhere else it is an
+        // operator, so "5000++2" is rejected rather than read as 5000 + (+2) —
+        // a double tap should never silently change the amount.
+        if ((ch === '-' || ch === '+') && num === '' && tokens.length === 0) {
+            num = ch;
+            continue;
+        }
+        if (num === '') return null;      // operator with no left operand
+        tokens.push(Number(num));
+        if (!isFinite(tokens[tokens.length - 1])) return null;
+        num = '';
+        tokens.push(ch);
+    }
+    if (num === '' || num === '-' || num === '+') return null; // trailing operator
+    const last = Number(num);
+    if (!isFinite(last)) return null;
+    tokens.push(last);
+
+    // Pass 1: * and /
+    const reduced = [tokens[0]];
+    for (let i = 1; i < tokens.length; i += 2) {
+        const op = tokens[i];
+        const rhs = tokens[i + 1];
+        if (typeof rhs !== 'number') return null;
+        if (op === '*' || op === '/') {
+            const lhs = reduced.pop();
+            if (op === '/' && rhs === 0) return null;   // refuse divide by zero
+            reduced.push(op === '*' ? lhs * rhs : lhs / rhs);
+        } else {
+            reduced.push(op, rhs);
+        }
+    }
+
+    // Pass 2: + and -
+    let result = reduced[0];
+    for (let i = 1; i < reduced.length; i += 2) {
+        const op = reduced[i];
+        const rhs = reduced[i + 1];
+        result = op === '+' ? result + rhs : result - rhs;
+    }
+
+    if (!isFinite(result)) return null;
+    return result;
+}
+
+// The panel stays open after "= Use", so briefly tint the amount to show the
+// result actually landed up there.
+function flashAmountApplied(amountInput) {
+    amountInput.style.transition = 'color 0.15s';
+    amountInput.style.color = '#32d74b';
+    setTimeout(() => { amountInput.style.color = '#f0f0f2'; }, 320);
+}
+
+// Keypad that builds an expression and writes the result into the amount field.
+// Kept separate from the amount input so the save path stays a plain integer.
+function setupAmountCalculator() {
+    const toggle = document.getElementById('calc-toggle');
+    const panel = document.getElementById('calc-panel');
+    const keys = document.getElementById('calc-keys');
+    const display = document.getElementById('calc-expression');
+    const amountInput = document.getElementById('amount-input');
+    if (!toggle || !panel || !keys || !display || !amountInput) return;
+
+    let expr = '';
+    const OPS = ['+', '-', '*', '/', '×', '÷'];
+    const isOp = (c) => OPS.indexOf(c) !== -1;
+
+    function render() {
+        display.textContent = expr || '0';
+        // Live preview of a complete expression.
+        const val = evalExpression(expr);
+        display.style.color = (expr && val === null) ? '#ff6b6b' : '#f0f0f2';
+    }
+
+    toggle.addEventListener('click', () => {
+        const open = panel.style.display !== 'none';
+        panel.style.display = open ? 'none' : 'block';
+        document.getElementById('calc-toggle-text').textContent = open ? 'Calculator' : 'Hide calculator';
+        if (!open && !expr) {
+            // Seed from whatever is already in the amount field.
+            const current = amountInput.value.replace(/\D/g, '');
+            expr = current || '';
+            render();
+        }
+    });
+
+    keys.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-calc]');
+        if (!btn) return;
+        const k = btn.dataset.calc;
+
+        if (k === 'clear') { expr = ''; return render(); }
+        if (k === 'back') { expr = expr.slice(0, -1); return render(); }
+
+        if (k === 'apply') {
+            const val = evalExpression(expr);
+            if (val === null) return render();          // leave the error showing
+            const rounded = Math.max(0, Math.round(val));
+            amountInput.value = String(rounded);
+            amountInput.dispatchEvent(new Event('input')); // reuse the page's formatter
+
+            // Deliberately leave the panel open: the result becomes the new
+            // expression so it can be carried straight into another sum, and
+            // the keypad doesn't vanish out from under the user.
+            expr = String(rounded);
+            render();
+            flashAmountApplied(amountInput);
+            return;
+        }
+
+        if (isOp(k)) {
+            if (!expr) return;                          // no leading operator
+            // A second operator replaces the first rather than stacking, so a
+            // double tap can't produce something the evaluator rejects.
+            if (isOp(expr.slice(-1))) expr = expr.slice(0, -1);
+            expr += k;
+            return render();
+        }
+
+        expr += k;                                       // digits and "000"
+        render();
+    });
+
+    render();
+}
+
+// The Add/Edit form's category dropdown, built from the user's own categories
+// so anything added on the Categorization page appears here immediately.
+// "Uncategorized" means no override — the keyword rules decide.
+function populateTransactionCategorySelect(selected) {
+    const select = document.getElementById('category-select');
+    if (!select) return;
+    const opts = ['<option value="">Uncategorized</option>'].concat(
+        getCategories().map(c =>
+            `<option value="${escAttr(c.name)}"${c.name === selected ? ' selected' : ''}>${escAttr(c.name)}</option>`
+        )
+    );
+    select.innerHTML = opts.join('');
+}
+
 async function prefillTransactionForm(id) {
     const { data, error } = await dbClient
         .from('int_bca_categorized')
-        .select('id, transaction_date, description, amount, transaction_type')
+        .select('id, transaction_date, description, amount, transaction_type, category')
         .eq('id', id)
         .maybeSingle();
 
@@ -1019,6 +1175,7 @@ async function prefillTransactionForm(id) {
     }
     if (descInput) descInput.value = data.description || '';
     if (dateInput) dateInput.value = data.transaction_date || '';
+    populateTransactionCategorySelect(data.category);
 
     applyEditLabels();
     // Switching type mid-edit re-runs setMode, which would restore "Add Expense".
@@ -1033,6 +1190,8 @@ function setupAddTransaction() {
     if (!submitBtn) return;
 
     const editId = editIdFromUrl();
+    populateTransactionCategorySelect();
+    setupAmountCalculator();
     if (editId) prefillTransactionForm(editId);
 
     submitBtn.addEventListener('click', async (e) => {
@@ -1050,11 +1209,16 @@ function setupAddTransaction() {
 
         // Store the full ISO date (the stg view now parses YYYY-MM-DD directly),
         // so the year is preserved instead of being forced to 2026.
+        // Empty means "no override" — let the keyword rules categorise it.
+        const categorySelect = document.getElementById('category-select');
+        const chosenCategory = categorySelect && categorySelect.value ? categorySelect.value : null;
+
         const row = {
             date: rawDate,
             description: description,
             amount: amountNumber,
-            type: transactionType
+            type: transactionType,
+            category_override: chosenCategory
         };
 
         submitBtn.disabled = true;
