@@ -112,20 +112,23 @@
             <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;font-family:Inter,sans-serif;">Category</p>
             <div style="position:relative;">
                 <span class="material-symbols-outlined" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#8a8a8e;pointer-events:none;z-index:1;">category</span>
+                <!-- Options are filled from the user's categories table by
+                     setupAddRule() in app.js. -->
                 <select id="category" class="form-field" style="padding-right:40px;color-scheme:dark;">
                     <option disabled selected value="">Select a category</option>
-                    <option value="food">Food &amp; Dining</option>
-                    <option value="transport">Transportation</option>
-                    <option value="health">Health &amp; Wellness</option>
-                    <option value="utilities">Utilities</option>
-                    <option value="entertainment">Entertainment</option>
-                    <option value="shopping">Shopping</option>
-                    <option value="bills">Bills</option>
                 </select>
                 <span class="material-symbols-outlined" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#8a8a8e;pointer-events:none;">expand_more</span>
             </div>
         </div>
 
+    </div>
+
+    <!-- Existing rules -->
+    <div style="margin-top:32px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.05);">
+        <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;font-family:Inter,sans-serif;">Existing Rules</p>
+        <div id="rules-list" style="display:flex;flex-direction:column;gap:8px;">
+            <p style="color:#8a8a8e;font-size:13px;padding:12px 0;font-family:Inter,sans-serif;">Loading…</p>
+        </div>
     </div>
 
     <!-- Submit -->

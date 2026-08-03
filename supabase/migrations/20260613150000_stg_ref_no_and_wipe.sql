@@ -27,5 +27,13 @@ with raw_data as (
 select id, transaction_date, description, amount, transaction_type, created_at
 from cleaned;
 
--- Fresh start: clear the base table (also empties both views, incl. test rows).
-delete from bca_transactions;
+-- DISABLED 2026-08-03. This line was a one-off "clear the test rows" step when
+-- this migration was written in June. It is destructive and NOT idempotent: on
+-- 2026-08-03 a `supabase db push` against a project whose schema_migrations
+-- history was empty re-applied every migration, and this statement destroyed
+-- 135 live transactions. There are no backups on this plan.
+--
+-- The wipe it performed is already done. Re-running it can only ever cause
+-- data loss, so it stays commented out. Do not re-enable it.
+--
+-- delete from bca_transactions;

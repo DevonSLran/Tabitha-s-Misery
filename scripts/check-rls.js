@@ -35,6 +35,7 @@ const RELATIONS = [
   'mart_daily_spending',
   'merchant_mapping',
   'budgets',
+  'categories',
 ];
 
 let failures = 0;

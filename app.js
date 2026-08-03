@@ -72,6 +72,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     applyDisplayName();
     setupDesktopSidebarToggle();
 
+    // Categories drive icons and budget grouping, so they must be cached before
+    // anything renders.
+    await loadCategories();
+
     document.documentElement.style.setProperty('-webkit-font-smoothing', 'antialiased');
     document.documentElement.style.setProperty('-moz-osx-font-smoothing', 'grayscale');
     document.documentElement.style.setProperty('text-rendering', 'optimizeLegibility');
@@ -90,7 +94,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (document.getElementById('spendingChart')) loadDashboard(); 
     if (document.getElementById('transaction-list')) { loadTransactions(); setupActivityDelete(); }
     if (document.getElementById('all-categories-list')) loadCategoriesPage(); 
-    if (document.getElementById('keyword') && document.querySelector('button[type="submit"]')) setupAddRule(); 
+    if (document.getElementById('keyword') && document.querySelector('button[type="submit"]')) setupAddRule();
+    if (document.getElementById('categories-list')) setupCategoriesPage();
     if (document.getElementById('submit-transaction')) setupAddTransaction(); 
     if (document.getElementById('export-csv-btn')) setupAccountPage();
     if (document.getElementById('scan-emails-btn')) setupImportPage();
@@ -335,7 +340,160 @@ function setupDesktopSidebarToggle() {
 // --- HELPERS ---
 const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 
+// --- CATEGORIES (user-managed, `categories` table) ---
+// Seeded on a user's first load so new signups and existing accounts take the
+// same path — no trigger on auth.users. Names match what add-rule.html used to
+// hardcode, because merchant_mapping stores the category as free text.
+const DEFAULT_CATEGORIES = [
+    { name: 'Food & Dining',     icon: 'restaurant',              budget_group: 'FOOD',          sort_order: 1 },
+    { name: 'Transportation',    icon: 'directions_car',          budget_group: 'TRANSPORT',     sort_order: 2 },
+    { name: 'Health & Wellness', icon: 'favorite',                budget_group: 'OTHER',         sort_order: 3 },
+    { name: 'Utilities',         icon: 'bolt',                    budget_group: 'BILLS',         sort_order: 4 },
+    { name: 'Entertainment',     icon: 'movie',                   budget_group: 'ENTERTAINMENT', sort_order: 5 },
+    { name: 'Shopping',          icon: 'local_mall',              budget_group: 'SHOPPING',      sort_order: 6 },
+    { name: 'Bills',             icon: 'receipt_long',            budget_group: 'BILLS',         sort_order: 7 },
+];
+
+// Synchronous cache so the existing render code (which isn't async) keeps
+// working — same approach as budgetsCache below.
+let categoriesCache = [];
+
+function getCategories() {
+    return categoriesCache;
+}
+
+async function loadCategories() {
+    const { data, error } = await dbClient
+        .from('categories')
+        .select('id, name, icon, budget_group, sort_order')
+        .order('sort_order');
+
+    if (error) { console.error('Failed to load categories:', error); return categoriesCache; }
+
+    if (!data.length) {
+        // First load for this user — seed the defaults, then use them.
+        const { data: seeded, error: seedErr } = await dbClient
+            .from('categories')
+            .insert(DEFAULT_CATEGORIES)
+            .select('id, name, icon, budget_group, sort_order');
+        if (seedErr) { console.error('Failed to seed categories:', seedErr); return categoriesCache; }
+        categoriesCache = seeded || [];
+    } else {
+        categoriesCache = data;
+    }
+    return categoriesCache;
+}
+
+// --- CATEGORY MANAGER (categories.html) ---
+function renderCategoriesList() {
+    const container = document.getElementById('categories-list');
+    if (!container) return;
+
+    const cats = getCategories();
+    if (!cats.length) {
+        container.innerHTML = `<p style="color:#8a8a8e;font-size:13px;padding:12px 0;font-family:Inter,sans-serif;">No categories yet.</p>`;
+        return;
+    }
+
+    container.innerHTML = cats.map(c => {
+        const group = (BUDGET_GROUPS[c.budget_group] || BUDGET_GROUPS.OTHER).label;
+        return `
+        <div style="background:#161618;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;border:1px solid rgba(255,255,255,0.04);">
+            <div style="width:36px;height:36px;flex-shrink:0;border-radius:10px;background:rgba(50,215,75,0.07);display:flex;align-items:center;justify-content:center;">
+                <span class="material-symbols-outlined" style="font-size:17px;color:#32d74b;font-variation-settings:'FILL' 1;">${escAttr(c.icon)}</span>
+            </div>
+            <div style="flex:1;min-width:0;">
+                <p style="font-size:13px;font-weight:600;color:#f0f0f2;line-height:1.3;font-family:Inter,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escAttr(c.name)}</p>
+                <p style="font-size:11px;color:#8a8a8e;margin-top:2px;font-family:Inter,sans-serif;">${escAttr(group)}</p>
+            </div>
+            <button class="cat-rename active:scale-90 transition-transform" data-cat-id="${c.id}" data-cat-name="${escAttr(c.name)}" title="Rename" aria-label="Rename category" style="flex-shrink:0;width:30px;height:30px;border-radius:9px;background:transparent;border:none;color:#8a8a8e;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">
+                <span class="material-symbols-outlined" style="font-size:17px;pointer-events:none;">edit</span>
+            </button>
+            <button class="cat-delete active:scale-90 transition-transform" data-cat-id="${c.id}" data-cat-name="${escAttr(c.name)}" title="Delete" aria-label="Delete category" style="flex-shrink:0;width:30px;height:30px;border-radius:9px;background:transparent;border:none;color:#8a8a8e;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">
+                <span class="material-symbols-outlined" style="font-size:17px;pointer-events:none;">delete</span>
+            </button>
+        </div>`;
+    }).join('');
+}
+
+function setupCategoriesPage() {
+    const addBtn = document.getElementById('add-category-btn');
+    const list = document.getElementById('categories-list');
+    if (!list) return;
+
+    renderCategoriesList();
+
+    if (addBtn) addBtn.addEventListener('click', async () => {
+        const name = document.getElementById('category-name').value.trim();
+        const icon = document.getElementById('category-icon').value;
+        const group = document.getElementById('category-group').value;
+        if (!name) return alert('Give the category a name.');
+        if (findCategory(name)) return alert(`"${name}" already exists.`);
+
+        addBtn.disabled = true;
+        const { error } = await dbClient.from('categories').insert([{
+            name, icon, budget_group: group,
+            sort_order: (getCategories().length + 1)
+        }]);
+        addBtn.disabled = false;
+        if (error) return alert(`Couldn't add: ${error.message}`);
+
+        document.getElementById('category-name').value = '';
+        await loadCategories();
+        renderCategoriesList();
+    });
+
+    list.addEventListener('click', async (e) => {
+        const renameBtn = e.target.closest('.cat-rename');
+        const deleteBtn = e.target.closest('.cat-delete');
+        if (!renameBtn && !deleteBtn) return;
+
+        const btn = renameBtn || deleteBtn;
+        const id = btn.dataset.catId;
+        const oldName = btn.dataset.catName;
+
+        if (renameBtn) {
+            const next = (window.prompt('Rename category', oldName) || '').trim();
+            if (!next || next === oldName) return;
+            if (findCategory(next)) return alert(`"${next}" already exists.`);
+
+            const { error } = await dbClient.from('categories').update({ name: next }).eq('id', id);
+            if (error) return alert(`Couldn't rename: ${error.message}`);
+
+            // Keyword rules and per-transaction overrides store the category as
+            // free text, so they have to be renamed alongside it or they'd point
+            // at a category that no longer exists.
+            await dbClient.from('merchant_mapping').update({ category: next }).eq('category', oldName);
+            await dbClient.from('bca_transactions').update({ category_override: next }).eq('category_override', oldName);
+        } else {
+            if (!window.confirm(`Delete "${oldName}"?\n\nTransactions using it become Uncategorized.`)) return;
+
+            const { error } = await dbClient.from('categories').delete().eq('id', id);
+            if (error) return alert(`Couldn't delete: ${error.message}`);
+
+            // Clear the dangling references rather than orphaning them.
+            await dbClient.from('merchant_mapping').delete().eq('category', oldName);
+            await dbClient.from('bca_transactions').update({ category_override: null }).eq('category_override', oldName);
+        }
+
+        await loadCategories();
+        renderCategoriesList();
+    });
+}
+
+function findCategory(name) {
+    if (!name) return null;
+    const wanted = String(name).trim().toLowerCase();
+    return categoriesCache.find(c => c.name.trim().toLowerCase() === wanted) || null;
+}
+
 function getIconForCategory(category) {
+    // Prefer the user's own category record.
+    const match = findCategory(category);
+    if (match) return { icon: match.icon, color: 'text-primary' };
+
+    // Fallback for categories not in the table — legacy rows, "Uncategorized",
+    // or a keyword rule pointing at a category the user has since deleted.
     const cat = category ? category.toUpperCase() : 'UNCATEGORIZED';
     if (cat.includes('FOOD') || cat.includes('DINING')) return { icon: 'restaurant', color: 'text-primary' };
     if (cat.includes('TRANSPORT')) return { icon: 'directions_car', color: 'text-secondary' };
@@ -344,7 +502,7 @@ function getIconForCategory(category) {
     if (cat.includes('SHOPPING')) return { icon: 'local_mall', color: 'text-primary' };
     if (cat.includes('UTILIT') || cat.includes('BILL')) return { icon: 'bolt', color: 'text-secondary' };
     if (cat.includes('INCOME') || cat.includes('SALARY')) return { icon: 'payments', color: 'text-primary' };
-    return { icon: 'receipt_long', color: 'text-on-surface' }; 
+    return { icon: 'receipt_long', color: 'text-on-surface' };
 }
 
 function aggregateCategories(transactions) {
@@ -544,7 +702,7 @@ function renderActivity() {
                 </div>
                 <div style="flex:1;min-width:0;">
                     <p style="font-size:13px;font-weight:600;color:#f0f0f2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;font-family:Inter,sans-serif;">${txn.description}</p>
-                    <p style="font-size:11px;color:#8a8a8e;margin-top:2px;font-family:Inter,sans-serif;">${category}</p>
+                    <button class="txn-category" data-txn-id="${txn.id}" data-txn-category="${escAttr(category)}" title="Change category" style="font-size:11px;color:#8a8a8e;margin-top:2px;font-family:Inter,sans-serif;background:transparent;border:none;padding:0;cursor:pointer;text-align:left;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;">${escAttr(category)} <span class="material-symbols-outlined" style="font-size:11px;vertical-align:-1px;opacity:0.6;">expand_more</span></button>
                 </div>
                 <div style="text-align:right;flex-shrink:0;max-width:44vw;">
                     <p style="font-size:13px;font-weight:700;color:${amountColor};font-variant-numeric:tabular-nums;white-space:nowrap;line-height:1.3;font-family:Inter,sans-serif;">${sign}${formattedAmount}</p>
@@ -576,6 +734,48 @@ async function deleteTransaction(id) {
     return error;
 }
 
+// Re-categorise one transaction. Writes category_override, which the
+// int_bca_categorized view prefers over the merchant_mapping keyword match, so
+// this sticks even if a rule would say otherwise.
+async function setTransactionCategory(id, category) {
+    const { error } = await dbClient
+        .from('bca_transactions')
+        .update({ category_override: category })
+        .eq('id', id);
+    return error;
+}
+
+// Simple prompt-based picker — consistent with the window.prompt already used
+// for the display name, and avoids introducing a modal system for one field.
+async function promptForCategory(id, current) {
+    const cats = getCategories();
+    if (!cats.length) return alert('No categories yet — add some first.');
+
+    const list = cats.map((c, i) => `${i + 1}. ${c.name}`).join('\n');
+    const answer = window.prompt(
+        `Category for this transaction (currently ${current}):\n\n${list}\n\nEnter a number, or 0 to clear the override.`,
+        ''
+    );
+    if (answer === null) return;
+
+    const n = parseInt(answer.trim(), 10);
+    if (Number.isNaN(n) || n < 0 || n > cats.length) return alert('Not a valid choice.');
+
+    // 0 clears the override and lets the keyword rules decide again.
+    const category = n === 0 ? null : cats[n - 1].name;
+    const error = await setTransactionCategory(id, category);
+    if (error) return alert(`Couldn't change category: ${error.message}`);
+
+    const txn = activityTxns.find(t => String(t.id) === String(id));
+    if (txn) txn.category = category || 'Uncategorized';
+    renderActivity();
+
+    if (!category) {
+        // The keyword rules may reassign it — refetch so the row shows the truth.
+        loadTransactions();
+    }
+}
+
 // One delegated listener for the whole list: renderActivity() replaces the
 // container's innerHTML wholesale, so per-row listeners would be lost on every
 // re-render.
@@ -584,6 +784,11 @@ function setupActivityDelete() {
     if (!container) return;
 
     container.addEventListener('click', async (e) => {
+        const cat = e.target.closest('.txn-category');
+        if (cat) {
+            return promptForCategory(cat.dataset.txnId, cat.dataset.txnCategory);
+        }
+
         const btn = e.target.closest('.txn-delete');
         if (!btn) return;
 
@@ -655,20 +860,108 @@ function renderCategoriesPage() {
 }
 
 // --- ADD RULE LOGIC (add-rule.html) ---
+// Fill the rule form's category dropdown from the user's own categories.
+function populateCategorySelect(select, selected) {
+    if (!select) return;
+    const opts = ['<option disabled value="">Select a category</option>']
+        .concat(getCategories().map(c =>
+            `<option value="${escAttr(c.name)}"${c.name === selected ? ' selected' : ''}>${escAttr(c.name)}</option>`
+        ));
+    select.innerHTML = opts.join('');
+    if (!selected) select.selectedIndex = 0;
+}
+
+async function loadRules() {
+    const { data, error } = await dbClient
+        .from('merchant_mapping')
+        .select('id, keyword, category')
+        .order('keyword');
+    if (error) { console.error('Failed to load rules:', error); return []; }
+    return data || [];
+}
+
+async function renderRulesList() {
+    const container = document.getElementById('rules-list');
+    if (!container) return;
+
+    const rules = await loadRules();
+    if (!rules.length) {
+        container.innerHTML = `<p style="color:#8a8a8e;font-size:13px;padding:12px 0;font-family:Inter,sans-serif;">No rules yet.</p>`;
+        return;
+    }
+
+    container.innerHTML = rules.map(r => `
+        <div style="background:#161618;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;border:1px solid rgba(255,255,255,0.04);">
+            <div style="flex:1;min-width:0;">
+                <p style="font-size:13px;font-weight:600;color:#f0f0f2;line-height:1.3;font-family:Inter,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escAttr(r.keyword)}</p>
+                <p style="font-size:11px;color:#8a8a8e;margin-top:2px;font-family:Inter,sans-serif;">→ ${escAttr(r.category)}</p>
+            </div>
+            <button class="rule-edit active:scale-90 transition-transform" data-rule-id="${r.id}" data-rule-keyword="${escAttr(r.keyword)}" data-rule-category="${escAttr(r.category)}" title="Edit rule" aria-label="Edit rule" style="flex-shrink:0;width:30px;height:30px;border-radius:9px;background:transparent;border:none;color:#8a8a8e;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">
+                <span class="material-symbols-outlined" style="font-size:17px;pointer-events:none;">edit</span>
+            </button>
+            <button class="rule-delete active:scale-90 transition-transform" data-rule-id="${r.id}" data-rule-keyword="${escAttr(r.keyword)}" title="Delete rule" aria-label="Delete rule" style="flex-shrink:0;width:30px;height:30px;border-radius:9px;background:transparent;border:none;color:#8a8a8e;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">
+                <span class="material-symbols-outlined" style="font-size:17px;pointer-events:none;">delete</span>
+            </button>
+        </div>`).join('');
+}
+
 function setupAddRule() {
     const submitBtn = document.querySelector('button[type="submit"]');
+    const keywordEl = document.getElementById('keyword');
+    const categorySelect = document.getElementById('category');
+    const rulesList = document.getElementById('rules-list');
+
+    populateCategorySelect(categorySelect);
+    renderRulesList();
+
+    // Set while editing an existing rule; null means "create a new one".
+    let editingRuleId = null;
+
     submitBtn.addEventListener('click', async (e) => {
-        e.preventDefault(); 
-        const keywordInput = document.getElementById('keyword').value.toUpperCase();
-        const categorySelect = document.getElementById('category');
-        const categoryText = categorySelect.options[categorySelect.selectedIndex].text;
+        e.preventDefault();
+        const keywordInput = keywordEl.value.toUpperCase().trim();
+        const categoryText = categorySelect.value;
 
-        if (!keywordInput || categoryText === "Select a category") return alert("Please fill everything!");
+        if (!keywordInput || !categoryText) return alert("Please fill everything!");
 
-        const { error } = await dbClient.from('merchant_mapping').insert([{ keyword: keywordInput, category: categoryText }]);
-        if (error) return alert("Failed to save rule.");
-        
-        window.location.href = "activity.html"; 
+        const { error } = editingRuleId
+            ? await dbClient.from('merchant_mapping')
+                .update({ keyword: keywordInput, category: categoryText }).eq('id', editingRuleId)
+            : await dbClient.from('merchant_mapping')
+                .insert([{ keyword: keywordInput, category: categoryText }]);
+
+        if (error) return alert(`Failed to save rule: ${error.message}`);
+
+        // Stay on the page so the updated list is visible, rather than bouncing
+        // to Activity as this used to.
+        editingRuleId = null;
+        keywordEl.value = '';
+        populateCategorySelect(categorySelect);
+        renderRulesList();
+    });
+
+    if (rulesList) rulesList.addEventListener('click', async (e) => {
+        const editBtn = e.target.closest('.rule-edit');
+        const delBtn = e.target.closest('.rule-delete');
+        if (!editBtn && !delBtn) return;
+
+        if (editBtn) {
+            editingRuleId = editBtn.dataset.ruleId;
+            keywordEl.value = editBtn.dataset.ruleKeyword;
+            populateCategorySelect(categorySelect, editBtn.dataset.ruleCategory);
+            keywordEl.focus();
+            keywordEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        if (!window.confirm(`Delete the rule for "${delBtn.dataset.ruleKeyword}"?`)) return;
+        const { error } = await dbClient.from('merchant_mapping').delete().eq('id', delBtn.dataset.ruleId);
+        if (error) return alert(`Couldn't delete: ${error.message}`);
+        if (editingRuleId === delBtn.dataset.ruleId) {
+            editingRuleId = null;
+            keywordEl.value = '';
+        }
+        renderRulesList();
     });
 }
 
@@ -1155,6 +1448,11 @@ const BUDGET_GROUPS = {
 };
 
 function mapCategoryToBudgetGroup(category) {
+    // The user's own category record decides which budget it counts against.
+    const match = findCategory(category);
+    if (match && BUDGET_GROUPS[match.budget_group]) return match.budget_group;
+
+    // Fallback for categories not in the table (see getIconForCategory).
     const cat = category ? category.toUpperCase() : '';
     if (cat.includes('FOOD') || cat.includes('DINING')) return 'FOOD';
     if (cat.includes('TRANSPORT')) return 'TRANSPORT';

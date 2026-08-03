@@ -11,6 +11,7 @@ transactions. Built as a web app and packaged as an Android app via
   delete any transaction.
 - **Budget** (`budget.html`) – track spending against budget categories.
 - **Categories** (`view-category.html`) – view transactions grouped by category, with rule-based auto-categorization (`add-rule.html`).
+- **Manage Categories** (`categories.html`) – create, rename, delete and pick icons for your own categories, and choose which budget each counts toward.
 - **Add Transaction** (`add-transaction.html`) – manually log a transaction.
 - **Email Import** (`import.html`) – scan a Gmail inbox for BCA "Internet Transaction Journal" emails, preview parsed transactions, and import the ones you select.
 - **Account** (`account.html`) – user/account settings, including an API key manager for market data.
@@ -40,11 +41,12 @@ transactions. Built as a web app and packaged as an Android app via
 - [x] **Real display name** — shows the name set in Account throughout the app
       instead of the "Alex Morgan" placeholder.
 
-### Planned
+- [x] **User-managed categories** — create, rename, delete and pick icons for
+      your own categories instead of the fixed list (`categories.html`);
+      re-categorise an individual transaction from Activity; view, edit and
+      delete existing keyword rules.
 
-- [ ] **User-managed categories** — create, rename, delete and pick icons for
-      your own categories instead of the fixed list; re-categorise an individual
-      transaction; view, edit and delete existing keyword rules.
+### Planned
 
 ### Ideas
 
