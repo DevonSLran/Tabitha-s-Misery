@@ -29,6 +29,8 @@ if (t) {
   check("description contains OVO", /OVO/.test(t.description), t.description);
   check("description has transfer type", /TRANSFER TO BCA VIRTUAL ACCOUNT/.test(t.description), t.description);
   check("description is uppercase", t.description === t.description.toUpperCase(), t.description);
+  // A real standalone "Name" row must survive the short-label guard.
+  check("standalone Name kept", t.raw["Name"] === "OVO 0895604499617", t.raw["Name"]);
 }
 
 // A variant with NO merchant fields — description must fall back, never blank.
@@ -62,7 +64,17 @@ if (h) {
   check("html: amount", h.amount === 15000, h.amount);
   check("html: ref", h.ref === "B133F61D-6916-44DB-A57D-57C8EAA67D2B", h.ref);
   check("html: desc", /VISIONET/.test(h.description), h.description);
+  // No standalone "Name" row here, so "Company/Product Name" must not bleed into it.
+  check("html: no bled Name", h.raw["Name"] === undefined, h.raw["Name"]);
 }
+
+// A zero-rupiah transaction is parseable, not garbage — the parser must not
+// reject it by falsiness. (index.ts separately declines to import amount <= 0.)
+const ZERO = `Transaction Date \t: \t05 Jul 2026 09:00:00Transfer Type \t: \tBI-FAST Transfer to Other BankTotal Payment \t: \tIDR 0.00Reference No. \t: \tZZZ-0Note(s):x`;
+const z = parseBcaEmail(ZERO);
+console.log("\nparseBcaEmail(ZERO):", JSON.stringify(z));
+check("zero: parsed not null", z !== null);
+check("zero: amount = 0", z?.amount === 0, z?.amount);
 
 // Amount-format edge cases.
 console.log("\namount formats:");
