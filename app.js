@@ -147,15 +147,9 @@ function setupLoginPage() {
                 if (error) throw error;
                 location.replace('index.html');
             } else {
-                const { data, error } = await dbClient.auth.signUp({ email, password });
+                const { error } = await dbClient.auth.signUp({ email, password });
                 if (error) throw error;
-                if (data.session) {
-                    location.replace('index.html'); // email confirmation disabled → instant login
-                } else {
-                    showError('Account created — check your email to confirm, then sign in.');
-                    mode = 'signin'; applyMode();
-                    submitBtn.disabled = false; submitBtn.textContent = 'Sign In';
-                }
+                location.replace('index.html'); // autoconfirm is on → signUp returns a session
             }
         } catch (e) {
             showError(e.message || 'Something went wrong.');
