@@ -31,7 +31,7 @@ const SIDEBAR_TEMPLATE = `
     <div style="padding:12px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:10px;">
         <img alt="User Avatar" style="width:34px;height:34px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px rgba(50,215,75,0.25);" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDWlmdEo4ZY-aHf5OzdU6LBoBZ4Pc3lLh9MXeXY0dJLe-USS5ZZnpBUzvMnu1ai-uqXd4Ob1kIrDUca6Klr0gmMTGh_u29hz62qniXAWDyRzzcYrioi0FgiOn1ZYHyJ94PEk7dWERbAHbHXfEuVGxl_ahH3UWpJxcYOGqKhAqSv6Hv9AXlgLnjjkXqXnzBYz7EdH1Nys3Ba5dAfmNB_iZS5b7xYkntfG2ZsZj2sTD2bcAXwRPhKpEy14G4hlt0fwNxUttCY-lhrVnY"/>
         <div>
-            <p style="font-size:12px;font-weight:600;color:#f0f0f2;line-height:1.3;">Alex Morgan</p>
+            <p data-display-name style="font-size:12px;font-weight:600;color:#f0f0f2;line-height:1.3;">&nbsp;</p>
             <p style="font-size:11px;color:#8a8a8e;line-height:1.3;margin-top:1px;">Pro Member</p>
         </div>
     </div>
@@ -69,6 +69,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (onLoginPage) { setupLoginPage(); return; }
 
     loadNavigation();
+    applyDisplayName();
     setupDesktopSidebarToggle();
 
     document.documentElement.style.setProperty('-webkit-font-smoothing', 'antialiased');
@@ -87,7 +88,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (document.getElementById('spendingChart')) loadDashboard(); 
-    if (document.getElementById('transaction-list')) loadTransactions(); 
+    if (document.getElementById('transaction-list')) { loadTransactions(); setupActivityDelete(); }
     if (document.getElementById('all-categories-list')) loadCategoriesPage(); 
     if (document.getElementById('keyword') && document.querySelector('button[type="submit"]')) setupAddRule(); 
     if (document.getElementById('submit-transaction')) setupAddTransaction(); 
@@ -162,7 +163,29 @@ function setupLoginPage() {
     applyMode();
 }
 
-// --- NOTIFICATION TOGGLE (firing logic added in Phase 3) ---
+// --- DISPLAY NAME ---
+// One source of truth for the name shown around the app. Account lets the user
+// set user_metadata.display_name (see setupAccountPage); every other page just
+// reads it here, so the two can't drift apart.
+function resolveDisplayName(user) {
+    if (!user) return '';
+    const meta = user.user_metadata && user.user_metadata.display_name;
+    return meta || (user.email || 'User').split('@')[0];
+}
+
+// Fill every [data-display-name] element. Call after loadNavigation(), since the
+// sidebar and bottom bar are injected at runtime.
+async function applyDisplayName() {
+    const nodes = document.querySelectorAll('[data-display-name]');
+    if (!nodes.length) return;
+    try {
+        const { data } = await dbClient.auth.getUser();
+        const name = resolveDisplayName(data && data.user);
+        if (name) nodes.forEach(el => { el.textContent = name; });
+    } catch (_) { /* leave the fallback text in place */ }
+}
+
+// --- NOTIFICATION TOGGLE ---
 function setNotifToggleVisual(on) {
     const t = document.getElementById('notif-toggle');
     const k = document.getElementById('notif-knob');
@@ -527,6 +550,9 @@ function renderActivity() {
                     <p style="font-size:13px;font-weight:700;color:${amountColor};font-variant-numeric:tabular-nums;white-space:nowrap;line-height:1.3;font-family:Inter,sans-serif;">${sign}${formattedAmount}</p>
                     <span style="font-size:9px;font-weight:600;color:#8a8a8e;background:rgba(255,255,255,0.06);border-radius:6px;padding:2px 6px;display:inline-block;margin-top:3px;font-family:Inter,sans-serif;">${typeVal}</span>
                 </div>
+                <button class="txn-delete active:scale-90 transition-transform" data-txn-id="${txn.id}" data-txn-desc="${escAttr(txn.description)}" title="Delete transaction" aria-label="Delete transaction" style="flex-shrink:0;width:30px;height:30px;border-radius:9px;background:transparent;border:none;color:#8a8a8e;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">
+                    <span class="material-symbols-outlined" style="font-size:17px;pointer-events:none;">delete</span>
+                </button>
             </div>`;
         });
 
@@ -534,6 +560,49 @@ function renderActivity() {
     });
 
     container.innerHTML = htmlContent;
+}
+
+// Soft-delete a transaction. The row is kept with deleted_at set so the email
+// importer's ref_no dedup still recognises it and won't re-add it on the next
+// scan — see supabase/migrations/20260803120000_soft_delete_transactions.sql.
+async function deleteTransaction(id) {
+    const { error } = await dbClient
+        .from('bca_transactions')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id);
+    return error;
+}
+
+// One delegated listener for the whole list: renderActivity() replaces the
+// container's innerHTML wholesale, so per-row listeners would be lost on every
+// re-render.
+function setupActivityDelete() {
+    const container = document.getElementById('transaction-list');
+    if (!container) return;
+
+    container.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.txn-delete');
+        if (!btn) return;
+
+        const id = btn.dataset.txnId;
+        if (!id || id === 'undefined') {
+            return alert("Can't delete this transaction — it has no id.");
+        }
+        if (!window.confirm(`Delete "${btn.dataset.txnDesc}"?\n\nIt won't come back on the next email import.`)) return;
+
+        btn.disabled = true;
+        btn.style.opacity = '0.4';
+        const error = await deleteTransaction(id);
+        if (error) {
+            btn.disabled = false;
+            btn.style.opacity = '';
+            return alert(`Couldn't delete: ${error.message}`);
+        }
+
+        // Drop it from the in-memory list and re-render rather than refetching.
+        activityTxns = activityTxns.filter(t => String(t.id) !== String(id));
+        renderActivity();
+    });
 }
 
 // --- CATEGORIES LOGIC (category.html) ---
@@ -677,8 +746,7 @@ function setupAccountPage() {
         const user = data && data.user;
         if (!user) return;
         if (emailEl) emailEl.textContent = user.email || '';
-        const fallback = (user.email || 'User').split('@')[0];
-        if (nameEl) nameEl.textContent = (user.user_metadata && user.user_metadata.display_name) || fallback;
+        if (nameEl) nameEl.textContent = resolveDisplayName(user);
     });
 
     if (editNameBtn) editNameBtn.addEventListener('click', async () => {
@@ -688,6 +756,7 @@ function setupAccountPage() {
         const { error } = await dbClient.auth.updateUser({ data: { display_name: next } });
         if (error) return alert(`Couldn't update name: ${error.message}`);
         if (nameEl) nameEl.textContent = next;
+        applyDisplayName(); // refresh the sidebar/nav on this page too
     });
 
     if (signOutBtn) signOutBtn.addEventListener('click', () => signOutAndRedirect());

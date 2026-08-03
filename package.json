@@ -5,6 +5,8 @@
   "main": "app.js",
   "scripts": {
     "copy": "mkdir -p www/vendor && cp *.html app.js www/ && cp vendor/* www/vendor/",
+    "check:rls": "node scripts/check-rls.js",
+    "test": "node supabase/functions/import-bca-emails/parser.test.ts && node scripts/check-rls.js",
     "sync": "npm run copy && cap sync android",
     "open": "cap open android",
     "build:android": "npm run copy && cap sync android && cap build android",
