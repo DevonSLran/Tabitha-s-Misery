@@ -10,8 +10,8 @@ transactions. Built as a web app and packaged as an Android app via
 - **Activity** (`activity.html`) – browse transaction history by month; edit or
   delete any transaction.
 - **Budget** (`budget.html`) – track spending against budget categories.
-- **Categories** (`view-category.html`) – view transactions grouped by category, with rule-based auto-categorization (`add-rule.html`).
-- **Manage Categories** (`categories.html`) – create, rename, delete and pick icons for your own categories, and choose which budget each counts toward.
+- **Spending by Category** (`view-category.html`) – view transactions grouped by category.
+- **Categorization** (`categories.html`) – create, rename, delete and pick icons for your own categories, choose which budget each counts toward, and manage the keyword rules that auto-assign them.
 - **Add Transaction** (`add-transaction.html`) – manually log a transaction.
 - **Email Import** (`import.html`) – scan a Gmail inbox for BCA "Internet Transaction Journal" emails, preview parsed transactions, and import the ones you select.
 - **Account** (`account.html`) – user/account settings, including an API key manager for market data.
@@ -40,13 +40,10 @@ transactions. Built as a web app and packaged as an Android app via
       mode (`add-transaction.html?id=…`).
 - [x] **Real display name** — shows the name set in Account throughout the app
       instead of the "Alex Morgan" placeholder.
-
 - [x] **User-managed categories** — create, rename, delete and pick icons for
-      your own categories instead of the fixed list (`categories.html`);
-      re-categorise an individual transaction from Activity; view, edit and
-      delete existing keyword rules.
-
-### Planned
+      your own categories instead of the fixed list; re-categorise an individual
+      transaction from Activity; view, edit and delete keyword rules. Categories
+      and rules share one Categorization page (`categories.html`).
 
 ### Ideas
 

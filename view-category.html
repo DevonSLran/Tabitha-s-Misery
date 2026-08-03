@@ -3,7 +3,7 @@
 <html class="dark" lang="en"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>All Categories - Tabitha's Misery</title>
+<title>Spending by Category - Tabitha's Misery</title>
 <script src="vendor/tailwind.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
@@ -151,11 +151,23 @@
         <a href="index.html" class="flex items-center justify-center active:scale-90 transition-transform" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.05);color:#8a8a8e;">
             <span class="material-symbols-outlined" style="font-size:19px;">arrow_back</span>
         </a>
-        <span style="color:#f0f0f2;font-weight:700;font-size:17px;font-family:Inter,sans-serif;">Categories</span>
+        <span style="color:#f0f0f2;font-weight:700;font-size:17px;font-family:Inter,sans-serif;">Spending by Category</span>
+        <a href="categories.html" title="Manage categories" aria-label="Manage categories" class="flex items-center justify-center active:scale-90 transition-transform" style="margin-left:auto;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.05);color:#8a8a8e;flex-shrink:0;">
+            <span class="material-symbols-outlined" style="font-size:19px;">tune</span>
+        </a>
     </div>
 </header>
 <!-- Main Content Canvas -->
 <main id="all-categories-list" data-main-with-sidebar class="flex-grow px-6 py-6 max-w-3xl mx-auto w-full">
+    <!-- This page shows spending grouped by category. Creating, renaming and
+         deleting categories lives on categories.html. -->
+    <a href="categories.html" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:#161618;border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:13px 15px;margin-bottom:20px;text-decoration:none;">
+        <span style="display:flex;align-items:center;gap:10px;">
+            <span class="material-symbols-outlined" style="font-size:18px;color:#32d74b;">tune</span>
+            <span style="font-size:13px;font-weight:600;color:#f0f0f2;font-family:Inter,sans-serif;">Manage categories</span>
+        </span>
+        <span class="material-symbols-outlined" style="font-size:18px;color:#8a8a8e;">chevron_right</span>
+    </a>
     <div id="month-nav"></div>
     <div id="category-cards" class="space-y-6"></div>
     </main>

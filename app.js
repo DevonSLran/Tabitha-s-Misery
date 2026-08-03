@@ -342,7 +342,7 @@ const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency'
 
 // --- CATEGORIES (user-managed, `categories` table) ---
 // Seeded on a user's first load so new signups and existing accounts take the
-// same path — no trigger on auth.users. Names match what add-rule.html used to
+// same path — no trigger on auth.users. Names match what the rule form used to
 // hardcode, because merchant_mapping stores the category as free text.
 const DEFAULT_CATEGORIES = [
     { name: 'Food & Dining',     icon: 'restaurant',              budget_group: 'FOOD',          sort_order: 1 },
@@ -466,13 +466,18 @@ function setupCategoriesPage() {
             await dbClient.from('merchant_mapping').update({ category: next }).eq('category', oldName);
             await dbClient.from('bca_transactions').update({ category_override: next }).eq('category_override', oldName);
         } else {
-            if (!window.confirm(`Delete "${oldName}"?\n\nTransactions using it become Uncategorized.`)) return;
+            if (!window.confirm(`Delete "${oldName}"?\n\nIts transactions become Uncategorized. Keyword rules are kept and repointed at Uncategorized, so you don't lose them.`)) return;
 
             const { error } = await dbClient.from('categories').delete().eq('id', id);
             if (error) return alert(`Couldn't delete: ${error.message}`);
 
-            // Clear the dangling references rather than orphaning them.
-            await dbClient.from('merchant_mapping').delete().eq('category', oldName);
+            // Keep the rules — the keyword is the hard-won part and is still
+            // worth having. Repoint them at Uncategorized rather than deleting
+            // them, so they can be reassigned to another category later.
+            await dbClient.from('merchant_mapping').update({ category: 'Uncategorized' }).eq('category', oldName);
+
+            // Clear per-transaction overrides so those rows fall back to the
+            // rules, which now say Uncategorized.
             await dbClient.from('bca_transactions').update({ category_override: null }).eq('category_override', oldName);
         }
 
@@ -859,7 +864,7 @@ function renderCategoriesPage() {
     host.innerHTML = cardsHtml || `<p style="color:#8a8a8e;font-size:13px;text-align:center;padding:24px 0;font-family:Inter,sans-serif;">No spending this month.</p>`;
 }
 
-// --- ADD RULE LOGIC (add-rule.html) ---
+// --- RULE LOGIC (rules section of categories.html) ---
 // Fill the rule form's category dropdown from the user's own categories.
 function populateCategorySelect(select, selected) {
     if (!select) return;

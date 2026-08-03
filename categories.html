@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Categories - Tabitha's Misery</title>
+<title>Categorization - Tabitha's Misery</title>
 <script src="vendor/tailwind.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -77,7 +77,7 @@
         <a href="account.html" class="flex items-center justify-center active:scale-90 transition-transform" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.05);color:#8a8a8e;">
             <span class="material-symbols-outlined" style="font-size:19px;">arrow_back</span>
         </a>
-        <span style="color:#f0f0f2;font-weight:700;font-size:17px;font-family:Inter,sans-serif;">Categories</span>
+        <span style="color:#f0f0f2;font-weight:700;font-size:17px;font-family:Inter,sans-serif;">Categorization</span>
     </div>
 </header>
 
@@ -85,14 +85,14 @@
 
     <!-- Page heading -->
     <div style="margin-bottom:24px;margin-top:8px;">
-        <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Categorization</p>
-        <h1 style="font-size:24px;font-weight:700;color:#f0f0f2;line-height:1.1;">Categories</h1>
+        <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Setup</p>
+        <h1 style="font-size:24px;font-weight:700;color:#f0f0f2;line-height:1.1;">Categorization</h1>
     </div>
 
     <!-- Info hint -->
     <div style="background:rgba(50,215,75,0.05);border:1px solid rgba(50,215,75,0.12);border-radius:14px;padding:14px 16px;margin-bottom:28px;display:flex;align-items:flex-start;gap:12px;">
         <span class="material-symbols-outlined" style="font-size:17px;color:#32d74b;flex-shrink:0;margin-top:1px;font-variation-settings:'FILL' 1;">info</span>
-        <p style="font-size:12px;color:#8a8a8e;line-height:1.55;font-family:Inter,sans-serif;margin:0;">Categories group your spending and decide which budget each transaction counts against. Deleting one moves its transactions to Uncategorized.</p>
+        <p style="font-size:12px;color:#8a8a8e;line-height:1.55;font-family:Inter,sans-serif;margin:0;">Categories group your spending and decide which budget each transaction counts against. Deleting one moves its transactions to Uncategorized and repoints its keyword rules there — the rules themselves are kept.</p>
     </div>
 
     <!-- Existing categories -->
@@ -156,6 +156,56 @@
                 <span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:'FILL' 1;">add_circle</span>
                 Add Category
             </button>
+        </div>
+    </div>
+
+    <!-- ================= RULES ================= -->
+    <div style="margin-top:40px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.08);">
+
+        <div style="margin-bottom:16px;">
+            <h2 style="font-size:18px;font-weight:700;color:#f0f0f2;line-height:1.2;margin-bottom:6px;">Rules</h2>
+            <p style="font-size:12px;color:#8a8a8e;line-height:1.55;font-family:Inter,sans-serif;margin:0;">A rule assigns a category to any transaction whose description contains the keyword. The longest matching keyword wins.</p>
+        </div>
+
+        <!-- Existing rules -->
+        <div style="margin-bottom:28px;">
+            <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;font-family:Inter,sans-serif;">Your Rules</p>
+            <div id="rules-list" style="display:flex;flex-direction:column;gap:8px;">
+                <p style="color:#8a8a8e;font-size:13px;padding:12px 0;font-family:Inter,sans-serif;">Loading…</p>
+            </div>
+        </div>
+
+        <!-- Add / edit a rule -->
+        <div style="padding-top:20px;border-top:1px solid rgba(255,255,255,0.05);">
+            <p style="font-size:11px;font-weight:600;color:#8a8a8e;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;font-family:Inter,sans-serif;">Add a Rule</p>
+
+            <div style="display:flex;flex-direction:column;gap:16px;">
+                <div>
+                    <div style="position:relative;">
+                        <span class="material-symbols-outlined" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#8a8a8e;pointer-events:none;">search</span>
+                        <input id="keyword" type="text" placeholder="Keyword, e.g. GOFOOD" class="form-field"/>
+                    </div>
+                </div>
+
+                <div>
+                    <div style="position:relative;">
+                        <span class="material-symbols-outlined" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#8a8a8e;pointer-events:none;z-index:1;">category</span>
+                        <!-- Options are filled from the categories above by
+                             setupAddRule() in app.js. -->
+                        <select id="category" class="form-field" style="padding-right:40px;color-scheme:dark;">
+                            <option disabled selected value="">Select a category</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top:24px;">
+                <button type="submit" class="active:scale-[0.98] transition-transform"
+                        style="width:100%;background:rgba(50,215,75,0.1);color:#32d74b;font-size:15px;font-weight:700;font-family:Inter,sans-serif;padding:16px;border-radius:14px;border:1px solid rgba(50,215,75,0.2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+                    <span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:'FILL' 1;">save</span>
+                    Save Rule
+                </button>
+            </div>
         </div>
     </div>
 
