@@ -7,7 +7,8 @@ transactions. Built as a web app and packaged as an Android app via
 ## Features
 
 - **Dashboard** (`index.html`) – overview of balances, spending, and recent activity.
-- **Activity** (`activity.html`) – browse transaction history by month.
+- **Activity** (`activity.html`) – browse transaction history by month; edit or
+  delete any transaction.
 - **Budget** (`budget.html`) – track spending against budget categories.
 - **Categories** (`view-category.html`) – view transactions grouped by category, with rule-based auto-categorization (`add-rule.html`).
 - **Add Transaction** (`add-transaction.html`) – manually log a transaction.
@@ -30,17 +31,20 @@ transactions. Built as a web app and packaged as an Android app via
 - [x] Email/password auth with per-user row-level security
 - [x] Offline-capable — all libraries bundled, no CDN calls
 - [x] Signed Android release published to GitHub Releases
+- [x] **Delete a transaction** — remove a bad import or mistyped entry from the
+      Activity list. Soft-deleted so the importer still recognises the
+      reference number and doesn't re-add it on the next scan.
+- [x] **Edit a transaction** — change the description, amount, date or
+      expense/income type from Activity. Reuses the Add Transaction form in edit
+      mode (`add-transaction.html?id=…`).
+- [x] **Real display name** — shows the name set in Account throughout the app
+      instead of the "Alex Morgan" placeholder.
 
 ### Planned
 
-- [ ] **Delete a transaction** — remove a bad import or mistyped entry from the
-      Activity list. Soft-deleted so the importer still recognises the
-      reference number and doesn't re-add it on the next scan.
 - [ ] **User-managed categories** — create, rename, delete and pick icons for
       your own categories instead of the fixed list; re-categorise an individual
       transaction; view, edit and delete existing keyword rules.
-- [ ] **Real display name** — show the name set in Account throughout the app
-      instead of the "Alex Morgan" placeholder.
 
 ### Ideas
 

@@ -550,6 +550,9 @@ function renderActivity() {
                     <p style="font-size:13px;font-weight:700;color:${amountColor};font-variant-numeric:tabular-nums;white-space:nowrap;line-height:1.3;font-family:Inter,sans-serif;">${sign}${formattedAmount}</p>
                     <span style="font-size:9px;font-weight:600;color:#8a8a8e;background:rgba(255,255,255,0.06);border-radius:6px;padding:2px 6px;display:inline-block;margin-top:3px;font-family:Inter,sans-serif;">${typeVal}</span>
                 </div>
+                <a class="txn-edit active:scale-90 transition-transform" href="add-transaction.html?id=${encodeURIComponent(txn.id)}" title="Edit transaction" aria-label="Edit transaction" style="flex-shrink:0;width:30px;height:30px;border-radius:9px;color:#8a8a8e;display:flex;align-items:center;justify-content:center;text-decoration:none;">
+                    <span class="material-symbols-outlined" style="font-size:17px;pointer-events:none;">edit</span>
+                </a>
                 <button class="txn-delete active:scale-90 transition-transform" data-txn-id="${txn.id}" data-txn-desc="${escAttr(txn.description)}" title="Delete transaction" aria-label="Delete transaction" style="flex-shrink:0;width:30px;height:30px;border-radius:9px;background:transparent;border:none;color:#8a8a8e;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">
                     <span class="material-symbols-outlined" style="font-size:17px;pointer-events:none;">delete</span>
                 </button>
@@ -670,13 +673,73 @@ function setupAddRule() {
 }
 
 // --- ADD TRANSACTION LOGIC (add-transaction.html) ---
+// add-transaction.html doubles as the edit form: ?id=<txn id> loads that
+// transaction, prefills the fields and saves with an update instead of an
+// insert. Reusing the page keeps the amount formatting, date picker and
+// expense/income tabs in one place.
+function editIdFromUrl() {
+    return new URLSearchParams(window.location.search).get('id');
+}
+
+// Relabel the page for editing. Called after every setMode(), because the tab
+// buttons reset the submit label to "Add Expense"/"Add Income".
+function applyEditLabels() {
+    const title = document.getElementById('page-title');
+    const submitText = document.getElementById('submit-text');
+    const submitIcon = document.getElementById('submit-icon');
+    if (title) title.textContent = 'Edit Transaction';
+    if (submitText) submitText.textContent = 'Save Changes';
+    if (submitIcon) submitIcon.textContent = 'check_circle';
+    document.title = "Edit Transaction - Tabitha's Misery";
+}
+
+async function prefillTransactionForm(id) {
+    const { data, error } = await dbClient
+        .from('int_bca_categorized')
+        .select('id, transaction_date, description, amount, transaction_type')
+        .eq('id', id)
+        .maybeSingle();
+
+    if (error || !data) {
+        alert("Couldn't load that transaction — it may have been deleted.");
+        window.location.href = 'activity.html';
+        return;
+    }
+
+    // Click the real tab so the page's own setMode() runs (labels, icons,
+    // category options) rather than duplicating it here.
+    const tab = document.getElementById(data.transaction_type === 'CR' ? 'income-tab' : 'expense-tab');
+    if (tab) tab.click();
+
+    const amountInput = document.getElementById('amount-input');
+    const descInput = document.getElementById('description-input');
+    const dateInput = document.querySelector('input[type="date"]');
+
+    if (amountInput) {
+        amountInput.value = String(data.amount ?? '');
+        amountInput.dispatchEvent(new Event('input')); // reuse the page's formatter
+    }
+    if (descInput) descInput.value = data.description || '';
+    if (dateInput) dateInput.value = data.transaction_date || '';
+
+    applyEditLabels();
+    // Switching type mid-edit re-runs setMode, which would restore "Add Expense".
+    ['expense-tab', 'income-tab'].forEach(tabId => {
+        const el = document.getElementById(tabId);
+        if (el) el.addEventListener('click', applyEditLabels);
+    });
+}
+
 function setupAddTransaction() {
     const submitBtn = document.getElementById('submit-transaction');
     if (!submitBtn) return;
 
+    const editId = editIdFromUrl();
+    if (editId) prefillTransactionForm(editId);
+
     submitBtn.addEventListener('click', async (e) => {
         e.preventDefault();
-        
+
         const amountStr = document.getElementById('amount-input').value;
         const description = document.getElementById('description-input').value.toUpperCase();
         const rawDate = document.querySelector('input[type="date"]').value; // YYYY-MM-DD
@@ -689,14 +752,22 @@ function setupAddTransaction() {
 
         // Store the full ISO date (the stg view now parses YYYY-MM-DD directly),
         // so the year is preserved instead of being forced to 2026.
-        const { error } = await dbClient.from('bca_transactions').insert([{
+        const row = {
             date: rawDate,
             description: description,
             amount: amountNumber,
             type: transactionType
-        }]);
+        };
 
-        if (error) return alert(`Failed to save: ${error.message}`);
+        submitBtn.disabled = true;
+        const { error } = editId
+            ? await dbClient.from('bca_transactions').update(row).eq('id', editId)
+            : await dbClient.from('bca_transactions').insert([row]);
+
+        if (error) {
+            submitBtn.disabled = false;
+            return alert(`Failed to save: ${error.message}`);
+        }
         window.location.href = "activity.html";
     });
 }
