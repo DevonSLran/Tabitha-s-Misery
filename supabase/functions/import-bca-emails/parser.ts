@@ -18,9 +18,6 @@ const MONTHS: Record<string, number> = {
   nov: 11, dec: 12, des: 12,
 };
 
-// Known field labels. Longer/more-specific labels MUST come before shorter
-// ones that are substrings of them (e.g. "Company/Product Name" before "Name")
-// so the regex alternation stops at the right boundary.
 const LABELS = [
   "Status",
   "Transaction Date",
@@ -59,14 +56,25 @@ export function htmlToText(html: string): string {
     .trim();
 }
 
+// A short label can also be the tail of a longer one ("Name" inside
+// "Company/Product Name"), which would make it capture the longer field's
+// value. For those, block the leading words so the short label only matches
+// standalone, and require it not start mid-word ("Nickname:" isn't "Name:").
+// Unambiguous labels get no guard: values run straight into the next label in
+// collapsed emails ("SuccessfulTransaction Date"), so a letter may precede them.
+function guardFor(label: string): string {
+  const tail = " " + label.toLowerCase();
+  const prefixes = LABELS
+    .filter((l) => l !== label && l.toLowerCase().endsWith(tail))
+    .map((l) => l.slice(0, l.length - label.length).trimEnd());
+  if (!prefixes.length) return "";
+  return "(?<![A-Za-z/])(?<!(?:" + prefixes.join("|") + ")\\s)";
+}
+
 // Capture a field's value: everything between "Label :" and the next known
 // label (or end). Works whether fields are on separate lines or run together.
-function extract(
-  text: string,
-  label: string,
-  opts: { notAfterLetter?: boolean } = {},
-): string | null {
-  const pre = opts.notAfterLetter ? "(?<![A-Za-z/])" : "";
+function extract(text: string, label: string): string | null {
+  const pre = guardFor(label);
   const re = new RegExp(
     pre + label + "\\s*:\\s*([\\s\\S]*?)(?=\\s*(?:" + STOP + ")\\s*:|$)",
     "i",
@@ -110,7 +118,7 @@ export function parseBcaEmail(rawBody: string): ParsedTxn | null {
   const raw: Record<string, string> = {};
   for (const label of LABELS) {
     const key = label.replace(/\\/g, "");
-    const val = extract(text, label, { notAfterLetter: label === "Name" });
+    const val = extract(text, label);
     if (val) raw[key] = val;
   }
 
@@ -122,7 +130,7 @@ export function parseBcaEmail(rawBody: string): ParsedTxn | null {
   const amount = amountRaw ? parseAmount(amountRaw) : NaN;
 
   // Require the essentials; skip anything we can't trust rather than mis-import.
-  if (!date || !amount || !isFinite(amount) || !ref) return null;
+  if (!date || !isFinite(amount) || !ref) return null;
 
   // Default to expense (DB). Flip to CR only for clear incoming-funds wording.
   let type: "DB" | "CR" = "DB";
