@@ -2,11 +2,14 @@
   "name": "bca-finance-app",
   "version": "1.0.0",
   "description": "",
-  "main": "app.js",
+  "main": "js/app.js",
   "scripts": {
-    "copy": "mkdir -p www/vendor && cp *.html app.js www/ && cp vendor/* www/vendor/",
+    "build:css": "tailwindcss -c tailwind.config.js -i src/app.css -o css/app.css --minify",
+    "watch:css": "tailwindcss -c tailwind.config.js -i src/app.css -o css/app.css --watch",
+    "copy": "npm run build:css && rm -rf www && mkdir -p www && cp *.html www/ && cp -r css js fonts vendor www/",
     "check:rls": "node scripts/check-rls.js",
-    "test": "node supabase/functions/import-bca-emails/parser.test.ts && node scripts/check-rls.js",
+    "sync:fn": "cp js/format.js supabase/functions/_shared/tm/format.js",
+    "test": "node supabase/functions/import-bca-emails/parser.test.ts && node --test supabase/functions/_shared/tm/core.test.mjs && node scripts/check-rls.js",
     "sync": "npm run copy && cap sync android",
     "open": "cap open android",
     "build:android": "npm run copy && cap sync android && cap build android",
@@ -25,6 +28,7 @@
     "@capacitor/status-bar": "^8.0.2"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.3.4"
+    "@capacitor/cli": "^8.3.4",
+    "tailwindcss": "^3.4.17"
   }
 }

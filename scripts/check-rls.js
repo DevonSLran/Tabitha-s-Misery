@@ -18,13 +18,13 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const appJs = readFileSync(join(root, 'app.js'), 'utf8');
+const appJs = readFileSync(join(root, 'js', 'app.js'), 'utf8');
 
-// Read the credentials from app.js so there's only one place to update them.
+// Read the credentials from js/app.js so there's only one place to update them.
 const url = appJs.match(/SUPABASE_URL\s*=\s*'([^']+)'/)?.[1];
 const key = appJs.match(/SUPABASE_ANON_KEY\s*=\s*'([^']+)'/)?.[1];
 if (!url || !key) {
-  console.error('Could not read SUPABASE_URL / SUPABASE_ANON_KEY from app.js');
+  console.error('Could not read SUPABASE_URL / SUPABASE_ANON_KEY from js/app.js');
   process.exit(1);
 }
 

@@ -4,3 +4,11 @@ project_id = "oyexlcmrrhdvsqfbjoif"
 # Authorization header, so JWT verification stays on (blocks anonymous callers).
 [functions.import-bca-emails]
 verify_jwt = true
+
+# Remote MCP connector for claude.ai / the Claude apps. It answers unauthenticated
+# discovery requests itself (401 + OAuth metadata) and checks every user token
+# with Supabase Auth, so the gateway's JWT check is off.
+# Deploy: supabase functions deploy mcp --no-verify-jwt --project-ref oyexlcmrrhdvsqfbjoif
+# Never `supabase config push` this file: it would reset the project's live auth settings.
+[functions.mcp]
+verify_jwt = false

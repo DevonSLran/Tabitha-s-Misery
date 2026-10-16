@@ -1,0 +1,17 @@
+{
+  "name": "tabithas-misery-mcp",
+  "private": true,
+  "description": "Local MCP connector: lets Claude Code / Claude Desktop read and change your Tabitha's Misery data, signed in as you.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "login": "node login.mjs",
+    "logout": "node login.mjs --logout",
+    "test": "node --test ../supabase/functions/_shared/tm/core.test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.31.0",
+    "@supabase/supabase-js": "2.117.2",
+    "zod": "4.6.5"
+  }
+}

@@ -8,13 +8,12 @@
   },
   "plugins": {
     "StatusBar": {
-      "style": "LIGHT",
-      "backgroundColor": "#0d0d0f",
+      "style": "DEFAULT",
       "overlaysWebView": true
     },
     "SplashScreen": {
       "launchShowDuration": 1500,
-      "backgroundColor": "#0d0d0f",
+      "backgroundColor": "#F4F0E8",
       "showSpinner": false
     }
   }
