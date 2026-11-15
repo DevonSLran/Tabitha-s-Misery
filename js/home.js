@@ -4,16 +4,17 @@
 function heroHTML(ym, spent) {
     const size = TM.heroClass(spent);
     const prev = shiftMonth(ym, -1);
-    const p = TM.monthProgress(ym);
+    const p = monthProgress(ym);
     let compare = '';
-    // Current month: compare with the previous month up to the same day.
+    // Current month: compare with the previous month up to the same day of it.
     // Past months: compare whole months.
     const prevSpent = p.day
-        ? sumAmounts(expensesIn(prev).filter(t => Number(t.transaction_date.slice(8)) <= p.day))
+        ? sumAmounts(expensesIn(prev).filter(t => dayInMonth(t, prev) <= p.day))
         : sumAmounts(expensesIn(prev));
     if (spent || prevSpent) {
         const diff = spent - prevSpent;
-        const against = p.day ? `by ${Math.min(p.day, TM.monthProgress(prev).days)} ${monthAbbr(prev)}` : monthName(prev);
+        const sameDay = TM.periodDate(prev, monthStartDay(), Math.min(p.day, monthProgress(prev).days) - 1);
+        const against = p.day ? `by ${TM.dayMonth(sameDay)}` : monthName(prev);
         compare = diff === 0
             ? `The same as ${p.day ? against : 'in ' + against}`
             : `${icon(diff > 0 ? 'north_east' : 'south_east', 'text-[16px]')}${esc(TM.rp(Math.abs(diff)))} ${diff > 0 ? 'more' : 'less'} than ${esc(against)}`;
@@ -33,7 +34,7 @@ function budgetsBlockHTML(ym) {
             <span class="link text-body-s whitespace-nowrap">Set a budget →</span></a>`;
     }
     const s = TM.budgetStatus(sum.spent, sum.limit);
-    const p = TM.monthProgress(ym);
+    const p = monthProgress(ym);
     const tick = p.day ? `<span class="bar-tick" style="left: ${p.pct}%" aria-hidden="true"></span>` : '';
     return `<a href="budget.html" class="flex flex-col gap-2.5" aria-label="Budgets: ${esc(s.pctLabel)}, ${esc(TM.rp(sum.spent))} of ${esc(TM.rp(sum.limit))}">
         <span class="flex justify-between items-center gap-2"><span class="text-[15px] font-semibold">Budgets</span><span class="pill pill--${s.key}">${icon(s.icon)}${esc(s.pctLabel)}</span></span>
@@ -72,10 +73,11 @@ function nudgeHTML(ym) {
 }
 
 function dayChartHTML(ym) {
-    const p = TM.monthProgress(ym);
+    const p = monthProgress(ym);
     const today = p.day || (ym < thisMonth() ? p.days : 0);
     const daily = Array.from({ length: p.days }, () => 0);
-    expensesIn(ym).forEach(t => { daily[Number(t.transaction_date.slice(8)) - 1] += t.amount; });
+    expensesIn(ym).forEach(t => { daily[dayInMonth(t, ym) - 1] += t.amount; });
+    const dateAt = (i) => TM.periodDate(ym, monthStartDay(), i); // bar i -> "YYYY-MM-DD"
     const max = Math.max(...daily.slice(0, today || p.days));
     const top = niceAxisMax(max);
     let peak = 0;
@@ -88,11 +90,11 @@ function dayChartHTML(ym) {
         const color = p.day && d === p.day ? 'bg-accent' : 'bg-text-2';
         return `<span class="day-bar ${color}" style="height: ${h.toFixed(2)}%" data-day="${d}" data-amount="${v}"></span>`;
     }).join('');
-    const label = (set) => daily.map((_, i) => `<span>${set.includes(i + 1) ? i + 1 : ''}</span>`).join('');
+    // Axis labels show the date of the 1st, 8th, 15th… bar of the month.
+    const label = (set) => daily.map((_, i) => `<span>${set.includes(i + 1) ? Number(dateAt(i).slice(8)) : ''}</span>`).join('');
     const ticks = [top, top * 2 / 3, top / 3];
-    const mon = monthAbbr(ym);
     const aria = max
-        ? `Daily spending, 1 to ${today || p.days} ${monthName(ym)}. Highest: ${TM.rp(daily[peak])} on ${peak + 1} ${mon}.`
+        ? `Daily spending, ${TM.dayMonth(dateAt(0))} to ${TM.dayMonth(dateAt((today || p.days) - 1))}. Highest: ${TM.rp(daily[peak])} on ${TM.dayMonth(dateAt(peak))}.`
         : `No spending recorded in ${monthName(ym)}.`;
 
     return `<section class="card px-4 pt-4 pb-3 md:p-6 flex flex-col gap-3 md:gap-4" aria-label="Daily spending">
@@ -130,7 +132,7 @@ function bindChartReadout(root) {
         const i = Math.min(bars.length - 1, Math.max(0, Math.floor(((e.clientX - r.left) / r.width) * bars.length)));
         const bar = bars[i];
         if (bar.dataset.amount == null) { out.innerHTML = idle; return; }
-        out.textContent = `${TM.dateShort(`${ym}-${pad2(i + 1)}`)} · ${TM.rp(Number(bar.dataset.amount))}`;
+        out.textContent = `${TM.dateShort(TM.periodDate(ym, monthStartDay(), i))} · ${TM.rp(Number(bar.dataset.amount))}`;
     };
     chart.addEventListener('pointermove', show);
     chart.addEventListener('pointerdown', show);

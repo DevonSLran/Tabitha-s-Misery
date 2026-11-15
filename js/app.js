@@ -82,25 +82,52 @@ const parseAmount = (s) => parseInt(String(s || '').replace(/\D/g, ''), 10) || 0
 const pad2 = (n) => String(n).padStart(2, '0');
 const ymOf = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
 const isoOf = (d) => `${ymOf(d)}-${pad2(d.getDate())}`;
-const thisMonth = () => ymOf(new Date());
 const todayISO = () => isoOf(new Date());
 function shiftMonth(ym, n) {
     const [y, m] = ym.split('-').map(Number);
     return ymOf(new Date(y, m - 1 + n, 1));
 }
-const monthName = (ym) => TM.monthLabel(ym).split(' ')[0]; // "October"
-const monthAbbr = (ym) => TM.monthShort(ym).split(' ')[0]; // "Oct"
+
+// --- MONTH START DAY ---
+// A budget month can start on any day 1-28 (user_settings.month_start_day),
+// e.g. the 15th to match when money comes in. A month key "YYYY-MM" then means
+// the month that starts on that day: "2026-11" with the 15th is 15 Nov - 14 Dec.
+// Cached in localStorage so the first paint already uses it; loadSettings()
+// refreshes it. core.mjs mirrors this for the connector.
+const START_DAY_KEY = 'tm.monthStartDay';
+function monthStartDay() {
+    if (store.startDay) return store.startDay;
+    try { return TM.startDay(localStorage.getItem(START_DAY_KEY)); } catch (_) { return 1; }
+}
+function rememberStartDay(day) {
+    store.startDay = TM.startDay(day);
+    try { localStorage.setItem(START_DAY_KEY, String(store.startDay)); } catch (_) { /* private mode */ }
+}
+
+/** The calendar month today is in. Use for things that follow the bank, like email import ranges. */
+const calendarMonth = () => ymOf(new Date());
+/** The budget month today counts toward. */
+const thisMonth = () => TM.periodOf(todayISO(), monthStartDay());
+/** "October", or "15 Oct – 14 Nov" when months start later than the 1st. */
+const monthName = (ym) => TM.periodName(ym, monthStartDay());
+/** "October 2026", or "15 Oct – 14 Nov 2026". */
+const monthTitle = (ym) => TM.periodLabel(ym, monthStartDay());
+const monthAbbr = (ym) => TM.monthShort(ym).split(' ')[0]; // "Oct" (calendar)
+const monthProgress = (ym) => TM.monthProgress(ym, null, monthStartDay());
+const monthBounds = (ym) => TM.periodBounds(ym, monthStartDay());
+/** 1-based day of month `ym` that a transaction falls on. */
+const dayInMonth = (t, ym) => TM.periodDayIndex(t.transaction_date, ym, monthStartDay()) + 1;
 
 const isIncome = (t) => t.transaction_type === 'CR';
 const isUnsorted = (t) => !isIncome(t) && (!t.category || t.category === UNCATEGORIZED);
-const txMonth = (t) => String(t.transaction_date || '').slice(0, 7);
+const txMonth = (t) => TM.periodOf(t.transaction_date, monthStartDay());
 const sumAmounts = (list) => list.reduce((s, t) => s + Number(t.amount || 0), 0);
 const titleOf = (t) => TM.splitDescription(t.description).title || 'Untitled';
 
 function isNative() { return !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()); }
 
 // --- DATA ---
-const store = { user: null, categories: [], rules: [], budgets: {}, txns: [] };
+const store = { user: null, categories: [], rules: [], budgets: {}, txns: [], startDay: null };
 
 function displayName(user = store.user) {
     if (!user) return '';
@@ -136,6 +163,26 @@ async function loadBudgets() {
     (data || []).forEach(r => { map[r.grp] = { amount: Number(r.amount), start: r.start_month, end: r.end_month || r.start_month }; });
     store.budgets = map;
     return map;
+}
+
+/** The user's settings row. A missing row (or the table not created yet) means months start on the 1st. */
+async function loadSettings() {
+    const { data, error } = await dbClient.from('user_settings').select('month_start_day').maybeSingle();
+    if (error) {
+        console.warn('Settings unavailable, using the cached month start day:', error.message);
+        return monthStartDay();
+    }
+    rememberStartDay(data ? data.month_start_day : 1);
+    return store.startDay;
+}
+
+async function saveMonthStartDay(day) {
+    const d = TM.startDay(day);
+    const { error } = await dbClient.from('user_settings').upsert({ month_start_day: d }, { onConflict: 'user_id' });
+    if (error) throw error;
+    rememberStartDay(d);
+    Month.set(thisMonth()); // the old month key may now mean different dates
+    return d;
 }
 
 async function loadTransactions() {
@@ -345,19 +392,19 @@ function monthSwitcherHTML(ym, caption) {
         ? `<span class="text-caption text-muted tnum">${esc(caption || '')}</span>`
         : `<button type="button" class="link-small px-1.5 py-0.5" data-month-today>Back to this month</button>`;
     return `<div class="flex items-center justify-between gap-2">
-        <button type="button" class="icon-btn icon-btn--outline" data-month-step="-1" aria-label="${esc(TM.monthLabel(prev))}">${icon('chevron_left', 'text-[22px]')}</button>
+        <button type="button" class="icon-btn icon-btn--outline" data-month-step="-1" aria-label="${esc(monthTitle(prev))}">${icon('chevron_left', 'text-[22px]')}</button>
         <div class="flex flex-col items-center min-w-0">
-            <h2 class="font-serif font-normal text-[21px] leading-6 whitespace-nowrap" aria-live="polite">${esc(TM.monthLabel(ym))}</h2>${sub}
+            <h2 class="font-serif font-normal text-[21px] leading-6 whitespace-nowrap" aria-live="polite">${esc(monthTitle(ym))}</h2>${sub}
         </div>
-        <button type="button" class="icon-btn icon-btn--outline" data-month-step="1" ${current ? 'disabled aria-label="Next month (none yet)"' : `aria-label="${esc(TM.monthLabel(next))}"`}>${icon('chevron_right', 'text-[22px]')}</button>
+        <button type="button" class="icon-btn icon-btn--outline" data-month-step="1" ${current ? 'disabled aria-label="Next month (none yet)"' : `aria-label="${esc(monthTitle(next))}"`}>${icon('chevron_right', 'text-[22px]')}</button>
     </div>`;
 }
 function monthPillHTML(ym) {
     const current = ym === thisMonth();
     return `<div class="flex items-center gap-1 bg-surface border border-line rounded-full p-1">
-            <button type="button" class="icon-btn w-10 h-10" data-month-step="-1" aria-label="${esc(TM.monthLabel(shiftMonth(ym, -1)))}">${icon('chevron_left', 'text-[22px]')}</button>
-            <span class="font-serif text-[22px] px-2 whitespace-nowrap">${esc(TM.monthLabel(ym))}</span>
-            <button type="button" class="icon-btn w-10 h-10" data-month-step="1" ${current ? 'disabled aria-label="Next month (none yet)"' : `aria-label="${esc(TM.monthLabel(shiftMonth(ym, 1)))}"`}>${icon('chevron_right', 'text-[22px]')}</button>
+            <button type="button" class="icon-btn w-10 h-10" data-month-step="-1" aria-label="${esc(monthTitle(shiftMonth(ym, -1)))}">${icon('chevron_left', 'text-[22px]')}</button>
+            <span class="font-serif text-[22px] px-2 whitespace-nowrap">${esc(monthTitle(ym))}</span>
+            <button type="button" class="icon-btn w-10 h-10" data-month-step="1" ${current ? 'disabled aria-label="Next month (none yet)"' : `aria-label="${esc(monthTitle(shiftMonth(ym, 1)))}"`}>${icon('chevron_right', 'text-[22px]')}</button>
         </div>${current ? '' : '<button type="button" class="link-small px-1" data-month-today>Back to this month</button>'}`;
 }
 
@@ -382,7 +429,7 @@ function mountMonth(onChange, captionFor) {
     return render;
 }
 function defaultMonthCaption(ym) {
-    const p = TM.monthProgress(ym);
+    const p = monthProgress(ym);
     return p.day ? `Day ${p.day} of ${p.days}` : '';
 }
 
@@ -919,6 +966,8 @@ const App = {
         const { data: { session } } = await dbClient.auth.getSession();
         if (!session) { location.replace('login.html'); return; }
         store.user = session.user;
+        // Month keys depend on the start day, so know it before the page renders data.
+        const settings = loadSettings().catch((e) => { console.warn(e); });
         renderChrome({ tab, pushed, fab });
 
         // Android back: close the top layer first, then go back (or exit on Home).
@@ -932,6 +981,7 @@ const App = {
         }
 
         const flash = Flash.take();
+        await settings;
         try {
             await init();
         } catch (e) {
