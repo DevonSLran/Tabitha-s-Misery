@@ -126,16 +126,19 @@ Deno.serve(async (req) => {
       return json({ error: "DB lookup failed", detail: String(e) }, 500);
     }
 
+    // Dedup is per user (unique index on user_id, ref_no). Count what the
+    // insert actually wrote: ignoreDuplicates returns only the new rows.
     const fresh = valid.filter((r) => !existing.has(r.ref_no));
     let imported = 0;
     if (fresh.length) {
-      const { error } = await db
+      const { data, error } = await db
         .from("bca_transactions")
-        .upsert(fresh, { onConflict: "ref_no", ignoreDuplicates: true });
+        .upsert(fresh, { onConflict: "user_id,ref_no", ignoreDuplicates: true })
+        .select("id");
       if (error) return json({ error: "Insert failed", detail: error.message }, 500);
-      imported = fresh.length;
+      imported = data?.length ?? 0;
     }
-    return json({ imported, skipped: valid.length - fresh.length, invalid });
+    return json({ imported, skipped: valid.length - imported, invalid });
   }
 
   // ---- SCAN: fetch + parse emails, flag already-imported, insert nothing ----
