@@ -19,6 +19,9 @@ import { simpleParser } from "npm:mailparser@3.7.1";
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { parseBcaEmail, type ParsedTxn } from "./parser.ts";
 
+// Access is the caller's Supabase JWT (verify_jwt at the gateway, then
+// auth.getUser below). x-import-secret stays allowed only so older app builds,
+// which still send that header, pass the CORS preflight; it is ignored.
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -64,12 +67,6 @@ async function getExistingRefs(db: SupabaseClient, userId: string): Promise<Set<
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "Use POST" }, 405);
-
-  // Optional shared-secret gate (set IMPORT_SHARED_SECRET to enable).
-  const requiredSecret = Deno.env.get("IMPORT_SHARED_SECRET");
-  if (requiredSecret && req.headers.get("x-import-secret") !== requiredSecret) {
-    return json({ error: "Unauthorized" }, 401);
-  }
 
   let payload: {
     action?: string;
@@ -129,16 +126,19 @@ Deno.serve(async (req) => {
       return json({ error: "DB lookup failed", detail: String(e) }, 500);
     }
 
+    // Dedup is per user (unique index on user_id, ref_no). Count what the
+    // insert actually wrote: ignoreDuplicates returns only the new rows.
     const fresh = valid.filter((r) => !existing.has(r.ref_no));
     let imported = 0;
     if (fresh.length) {
-      const { error } = await db
+      const { data, error } = await db
         .from("bca_transactions")
-        .upsert(fresh, { onConflict: "ref_no", ignoreDuplicates: true });
+        .upsert(fresh, { onConflict: "user_id,ref_no", ignoreDuplicates: true })
+        .select("id");
       if (error) return json({ error: "Insert failed", detail: error.message }, 500);
-      imported = fresh.length;
+      imported = data?.length ?? 0;
     }
-    return json({ imported, skipped: valid.length - fresh.length, invalid });
+    return json({ imported, skipped: valid.length - imported, invalid });
   }
 
   // ---- SCAN: fetch + parse emails, flag already-imported, insert nothing ----

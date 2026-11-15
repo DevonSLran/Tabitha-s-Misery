@@ -97,7 +97,7 @@ GitHub Pages serves `main` from the repo root with **no build step**, so
   `bca_transactions.category_override` client-side (`js/rules.js`).
 - Edge function `supabase/functions/import-bca-emails/` (Deno): `scan` reads
   Gmail over IMAP and parses with `parser.ts`; `import` inserts the rows the
-  user selected, deduped by the unique `ref_no` index. Parser changes need a
+  user selected, deduped per user by the unique `(user_id, ref_no)` index. Parser changes need a
   case in `parser.test.ts`.
 
 ## Rules for database changes

@@ -42,7 +42,6 @@ async function callImportFn(body) {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
             'apikey': SUPABASE_ANON_KEY,
-            'x-import-secret': IMPORT_SECRET,
         },
         body: JSON.stringify(body),
     });
