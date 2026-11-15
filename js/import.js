@@ -5,7 +5,7 @@ const imp = {
     step: 'connect',          // connect | scan | review | done
     scanning: false,
     user: '', hasPassword: false,
-    from: `${shiftMonth(thisMonth(), -1)}-01`, to: todayISO(), // dates, both included
+    from: `${shiftMonth(calendarMonth(), -1)}-01`, to: todayISO(), // dates, both included
     results: [],              // [{ ref, date, description, amount, type, alreadyImported, on, open }]
     error: null,              // { kind: 'scan-auth' | 'scan' | 'import' | 'not-connected', message }
     done: null,               // summary after an import
@@ -24,7 +24,7 @@ function rangeLabel() {
 
 /** Quick ranges for the scan step. Each ends today at the latest. */
 function rangePresets() {
-    const ym = thisMonth(), today = todayISO(), prev = shiftMonth(ym, -1);
+    const ym = calendarMonth(), today = todayISO(), prev = shiftMonth(ym, -1); // bank emails follow the calendar
     return [
         { key: 'this', label: 'This month', from: `${ym}-01`, to: today },
         { key: 'last', label: 'Last month', from: `${prev}-01`, to: minDate(lastDayOf(prev), today) },
@@ -359,7 +359,7 @@ async function importSelected(btn) {
             imported: data.imported != null ? data.imported : chosen.length,
             skipped: data.skipped || 0,
             total: sumAmounts(chosen),
-            months: [...new Set(chosen.map(r => r.date.slice(0, 7)))].sort(),
+            months: [...new Set(chosen.map(r => txMonth({ transaction_date: r.date })))].sort(), // budget months, for Activity
             expenses: expenses.length, ruled, left: expenses.length - ruled,
         };
         chosen.forEach(r => { r.alreadyImported = true; r.on = false; r.open = false; });

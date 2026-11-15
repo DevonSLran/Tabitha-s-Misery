@@ -9,6 +9,7 @@ import {
     UNCATEGORIZED, BUDGET_GROUPS, GROUP_KEYS, CATEGORY_ICONS, isIncome, isUnsorted, normaliseTxns, budgetMap,
     budgetSummary, spendingByCategory, expensesIn, incomeIn, unsortedIn, sumAmounts, ruleFor,
     ruleByKeyword, normaliseKeyword, budgetRange, overrideFor, isMonth, isDate, thisMonth,
+    startDay, periodBounds,
 } from './core.mjs';
 
 export const SERVER_INFO = { name: 'tabithas-misery', version: '2.0.0' };
@@ -20,6 +21,7 @@ Data:
 - An expense's category comes from a manual choice if there is one, otherwise from keyword rules (the longest keyword found in the description wins), otherwise "Uncategorized". Income has no category.
 - Each category counts toward one of six fixed budget groups: ${GROUP_KEYS.join(', ')}. Uncategorized spending counts toward no budget.
 - Months are "YYYY-MM", dates "YYYY-MM-DD".
+- A user's month can start on a day other than the 1st (month_start_day, see get_settings), usually the day their money arrives. Then "YYYY-MM" means the month that starts on that day: with the 15th, "2026-11" runs from 15 Nov to 14 Dec, and 10 Nov counts toward "2026-10". Every tool that takes a month uses this, and month_summary returns the exact dates.
 
 Changing data (every tool that isn't read-only):
 - Before calling a write tool, tell the user exactly what will change: which transactions, categories, rules or budgets, with the old and new values. Then wait until they say yes. Do this every time, even when a request sounds clear.
@@ -78,7 +80,13 @@ export function registerTools(server, { db, TM, z, requireUser }) {
         return normaliseTxns(await fetchAll(() => db.from('int_bca_categorized').select(TX_COLS)
             .gte('transaction_date', from).lt('transaction_date', toExclusive).order('id')));
     }
-    const txnsInMonth = (ym) => txnsBetween(`${ym}-01`, `${nextMonth(ym)}-01`);
+    /** Every transaction of budget month `ym` when months start on `day`. */
+    const txnsInMonth = (ym, day) => txnsBetween(periodBounds(ym, day).start, periodBounds(nextMonth(ym), day).start);
+    /** The user's month start day. No row, or no user_settings table yet, means the 1st. */
+    async function loadStartDay() {
+        const { data, error } = await db.from('user_settings').select('month_start_day').maybeSingle();
+        return error ? 1 : startDay(data && data.month_start_day);
+    }
     const loadCategories = async () => q(db.from('categories').select('id, name, icon, budget_group, sort_order').order('sort_order'));
     const loadRules = async () => fetchAll(() => db.from('merchant_mapping').select('id, keyword, category').order('keyword'));
     const loadBudgets = async () => budgetMap(await q(db.from('budgets').select('grp, amount, start_month, end_month')));
@@ -107,7 +115,8 @@ export function registerTools(server, { db, TM, z, requireUser }) {
         };
     }
     const money = (n) => ({ amount: n, text: TM.rp(n) });
-    const monthArg = (m) => { const ym = m || thisMonth(); if (!isMonth(ym)) fail(`"${m}" isn't a month. Use YYYY-MM.`); return ym; };
+    const monthArg = (m, day) => { const ym = m || thisMonth(new Date(), day); if (!isMonth(ym)) fail(`"${m}" isn't a month. Use YYYY-MM.`); return ym; };
+    const periodOut = (ym, day) => { const b = periodBounds(ym, day); return { from: b.start, to: b.end }; };
     const groupLabel = (key) => (BUDGET_GROUPS[key] || BUDGET_GROUPS.OTHER).label;
 
     async function requireCategory(name, categories) {
@@ -118,7 +127,7 @@ export function registerTools(server, { db, TM, z, requireUser }) {
         return c.name;
     }
 
-    const zMonth = z.string().describe('Month as YYYY-MM. Defaults to the current month.');
+    const zMonth = z.string().describe('Month as YYYY-MM (the month that starts on the user\'s month start day). Defaults to the current month.');
     const zDate = z.string().describe('Date as YYYY-MM-DD');
     const zType = z.enum(['expense', 'income']);
     const zGroup = z.enum(GROUP_KEYS);
@@ -131,20 +140,22 @@ export function registerTools(server, { db, TM, z, requireUser }) {
         input: { month: zMonth.optional() },
         annotations: READ,
     }, async ({ month }) => {
-        const ym = monthArg(month);
-        const [txns, categories, budgets] = await Promise.all([txnsInMonth(ym), loadCategories(), loadBudgets()]);
-        const spent = sumAmounts(expensesIn(txns, ym));
-        const income = sumAmounts(incomeIn(txns, ym));
-        const b = budgetSummary({ txns, categories, budgets }, ym);
-        const unsorted = unsortedIn(txns, ym);
+        const day = await loadStartDay();
+        const ym = monthArg(month, day);
+        const [txns, categories, budgets] = await Promise.all([txnsInMonth(ym, day), loadCategories(), loadBudgets()]);
+        const spent = sumAmounts(expensesIn(txns, ym, day));
+        const income = sumAmounts(incomeIn(txns, ym, day));
+        const b = budgetSummary({ txns, categories, budgets, startDay: day }, ym);
+        const unsorted = unsortedIn(txns, ym, day);
         return {
             month: ym,
-            label: TM.monthLabel(ym),
+            label: TM.periodLabel(ym, day),
+            dates: periodOut(ym, day),
             spent: money(spent),
             income: money(income),
             net: { amount: income - spent, text: (income - spent < 0 ? '−' : '') + TM.rp(income - spent) },
-            transactions: { expenses: expensesIn(txns, ym).length, income: incomeIn(txns, ym).length },
-            by_category: spendingByCategory(txns, ym).map(c => ({ category: c.category, ...money(c.amount), count: c.count })),
+            transactions: { expenses: expensesIn(txns, ym, day).length, income: incomeIn(txns, ym, day).length },
+            by_category: spendingByCategory(txns, ym, day).map(c => ({ category: c.category, ...money(c.amount), count: c.count })),
             budgets: {
                 total_spent: money(b.spent),
                 total_limit: money(b.limit),
@@ -177,8 +188,10 @@ export function registerTools(server, { db, TM, z, requireUser }) {
             if (from) query = query.gte('transaction_date', from);
             if (to) query = query.lte('transaction_date', to);
         } else if (month) {
-            const ym = monthArg(month);
-            query = query.gte('transaction_date', `${ym}-01`).lt('transaction_date', `${nextMonth(ym)}-01`);
+            const day = await loadStartDay();
+            const ym = monthArg(month, day);
+            const b = periodBounds(ym, day);
+            query = query.gte('transaction_date', b.start).lte('transaction_date', b.end);
         }
         if (search) query = query.ilike('description', `%${search.replace(/[%_\\]/g, '\\$&')}%`);
         if (uncategorized_only) query = query.neq('transaction_type', 'CR').eq('category', UNCATEGORIZED);
@@ -243,7 +256,8 @@ export function registerTools(server, { db, TM, z, requireUser }) {
         input: { month: zMonth.optional() },
         annotations: READ,
     }, async ({ month }) => {
-        const ym = monthArg(month);
+        const day = await loadStartDay();
+        const ym = monthArg(month, day);
         const [budgets, cats] = await Promise.all([loadBudgets(), loadCategories()]);
         return GROUP_KEYS.map(key => {
             const b = budgets[key];
@@ -254,6 +268,16 @@ export function registerTools(server, { db, TM, z, requireUser }) {
                 budget: { ...money(b.amount), from: b.start, until: b.end === '9999-12' ? 'no end' : b.end, applies_in_month: ym >= b.start && ym <= b.end },
             };
         });
+    });
+
+    tool('get_settings', {
+        title: 'Settings',
+        description: 'The user\'s month start day (1 = calendar months, 15 = each month runs from the 15th to the 14th) and the dates of the current month.',
+        annotations: READ,
+    }, async () => {
+        const day = await loadStartDay();
+        const ym = thisMonth(new Date(), day);
+        return { month_start_day: day, current_month: ym, current_month_label: TM.periodLabel(ym, day), current_month_dates: periodOut(ym, day) };
     });
 
     // --- writes: transactions ---
@@ -503,7 +527,7 @@ export function registerTools(server, { db, TM, z, requireUser }) {
         },
         annotations: WRITE,
     }, async ({ group, amount, period = 'ongoing', month, until }) => {
-        const ym = monthArg(month);
+        const ym = monthArg(month, await loadStartDay());
         if (period === 'until' && (!until || !isMonth(until) || until < ym)) fail('For period "until", give an `until` month (YYYY-MM) on or after `month`.');
         const budgets = await loadBudgets();
         const existing = budgets[group] || null;
@@ -515,6 +539,25 @@ export function registerTools(server, { db, TM, z, requireUser }) {
             before: show(existing) || null,
             after: show({ amount, start, end }),
             undo: existing ? `set_budget back to the "before" values` : `remove_budget ${group}`,
+        };
+    });
+
+    tool('set_month_start_day', {
+        title: 'Set month start day',
+        description: 'Set the day budget months start on, 1 to 28 (1 = calendar months). Home, Activity, Budget and every month in these tools then count from that day. Budgets keep their amounts and months. Confirm with the user first.',
+        input: { day: z.number().int().min(1).max(28) },
+        annotations: WRITE,
+    }, async ({ day }) => {
+        const before = await loadStartDay();
+        const { error } = await db.from('user_settings').upsert({ month_start_day: day }, { onConflict: 'user_id' });
+        if (error) fail(/user_settings/.test(error.message || '') && /exist|schema cache/i.test(error.message || '')
+            ? 'The app\'s database doesn\'t have the user_settings table yet. Apply the month start day migration first.'
+            : `Supabase error: ${error.message}`);
+        const ym = thisMonth(new Date(), day);
+        return {
+            before: { month_start_day: before }, after: { month_start_day: day },
+            current_month: ym, current_month_dates: periodOut(ym, day),
+            undo: `set_month_start_day with day ${before}`,
         };
     });
 

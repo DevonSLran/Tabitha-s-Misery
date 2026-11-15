@@ -36,6 +36,7 @@ const RELATIONS = [
   'merchant_mapping',
   'budgets',
   'categories',
+  'user_settings',
 ];
 
 let failures = 0;

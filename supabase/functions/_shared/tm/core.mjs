@@ -1,7 +1,8 @@
 /* Pure finance logic for the MCP connector.
  *
  * The source of truth is the web app: js/app.js (constants, groupOf,
- * activeLimit, ruleFor, budgetSummary) and js/budget.js (budget month range).
+ * activeLimit, ruleFor, budgetSummary), js/budget.js (budget month range) and
+ * js/format.js (budget months that start on a chosen day).
  * A change there must be mirrored here — see CLAUDE.md. core.test.mjs checks
  * the constants against js/app.js.
  *
@@ -28,7 +29,33 @@ export const CATEGORY_ICONS = ['restaurant', 'directions_car', 'favorite', 'bolt
 
 export const isIncome = (t) => t.transaction_type === 'CR';
 export const isUnsorted = (t) => !isIncome(t) && (!t.category || t.category === UNCATEGORIZED);
-export const txMonth = (t) => String(t.transaction_date || '').slice(0, 7);
+
+/* Budget months (TM.startDay / periodOf / periodBounds in js/format.js).
+ * A month can start on any day 1-28 (user_settings.month_start_day). "2026-11"
+ * with start day 15 runs 15 Nov to 14 Dec. Start day 1 = calendar months.
+ * core.test.mjs checks these against js/format.js. */
+const pad2 = (n) => String(n).padStart(2, '0');
+const addMonths = (ym, n) => { const [y, m] = ym.split('-').map(Number); const d = new Date(Date.UTC(y, m - 1 + n, 1)); return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}`; };
+/** Anything outside 1..28 means the 1st. */
+export function startDay(day) {
+    const n = Math.floor(Number(day));
+    return n >= 1 && n <= 28 ? n : 1;
+}
+/** The month a date counts toward. */
+export function periodOf(iso, day = 1) {
+    const s = String(iso || '');
+    const ym = s.slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(ym)) return '';
+    return Number(s.slice(8, 10)) >= startDay(day) ? ym : addMonths(ym, -1);
+}
+/** First and last date of a month, both included. */
+export function periodBounds(ym, day = 1) {
+    const sd = startDay(day);
+    const [y, m] = addMonths(ym, 1).split('-').map(Number);
+    const end = new Date(Date.UTC(y, m - 1, sd - 1)); // the day before the next month starts
+    return { start: `${ym}-${pad2(sd)}`, end: end.toISOString().slice(0, 10) };
+}
+export const txMonth = (t, day = 1) => periodOf(t.transaction_date, day);
 
 /** Same cleanup as loadTransactions() in js/app.js: drop undated rows, numeric amounts, newest first. */
 export function normaliseTxns(rows) {
@@ -75,15 +102,15 @@ export const ruleByKeyword = (rules, kw) =>
     rules.find(r => String(r.keyword).toUpperCase() === String(kw).toUpperCase()) || null;
 export const normaliseKeyword = (kw) => String(kw || '').toUpperCase().trim();
 
-export const expensesIn = (txns, ym) => txns.filter(t => txMonth(t) === ym && !isIncome(t));
-export const incomeIn = (txns, ym) => txns.filter(t => txMonth(t) === ym && isIncome(t));
-export const unsortedIn = (txns, ym) => expensesIn(txns, ym).filter(isUnsorted);
+export const expensesIn = (txns, ym, day = 1) => txns.filter(t => txMonth(t, day) === ym && !isIncome(t));
+export const incomeIn = (txns, ym, day = 1) => txns.filter(t => txMonth(t, day) === ym && isIncome(t));
+export const unsortedIn = (txns, ym, day = 1) => expensesIn(txns, ym, day).filter(isUnsorted);
 export const sumAmounts = (list) => list.reduce((s, t) => s + t.amount, 0);
 
 /** Per-group spending and limits for one month. */
-export function budgetSummary({ txns, categories, budgets }, ym) {
+export function budgetSummary({ txns, categories, budgets, startDay: day = 1 }, ym) {
     const spentBy = {};
-    expensesIn(txns, ym).forEach(t => {
+    expensesIn(txns, ym, day).forEach(t => {
         const g = groupOf(categories, t.category);
         if (g) spentBy[g] = (spentBy[g] || 0) + t.amount;
     });
@@ -98,9 +125,9 @@ export function budgetSummary({ txns, categories, budgets }, ym) {
 }
 
 /** Expense totals by category for one month, biggest first (js/spending.js). */
-export function spendingByCategory(txns, ym) {
+export function spendingByCategory(txns, ym, day = 1) {
     const by = {};
-    expensesIn(txns, ym).forEach(t => {
+    expensesIn(txns, ym, day).forEach(t => {
         const k = t.category || UNCATEGORIZED;
         by[k] = by[k] || { category: k, amount: 0, count: 0 };
         by[k].amount += t.amount;
@@ -135,7 +162,7 @@ export function isDate(s) {
     const d = new Date(s + 'T00:00:00Z');
     return !isNaN(d) && d.toISOString().slice(0, 10) === s;
 }
-/** Current month in local time, 'YYYY-MM'. */
-export function thisMonth(now = new Date()) {
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+/** The month today counts toward, in local time, 'YYYY-MM'. */
+export function thisMonth(now = new Date(), day = 1) {
+    return periodOf(`${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`, day);
 }

@@ -89,9 +89,15 @@ GitHub Pages serves `main` from the repo root with **no build step**, so
   sees its `ref_no` and doesn't re-import it. The views filter deleted rows.
   `ref_no` is null for hand-added rows (that's how "Source" is shown).
 - Other tables: `merchant_mapping` (keyword → category rules), `categories`
-  (user-managed), `budgets` (one row per budget group; `start_month` /
+  (user-managed), `user_settings`, `budgets` (one row per budget group; `start_month` /
   `end_month`, with `9999-12` meaning "no end" because the column is NOT
   NULL). All have per-user RLS (`user_id = auth.uid()`).
+- `user_settings` (one row per user, optional): `month_start_day` 1-28. A
+  month key `YYYY-MM` means the month that starts on that day ("2026-11" with
+  the 15th = 15 Nov to 14 Dec). Use `txMonth`, `thisMonth`, `monthProgress`,
+  `monthTitle` and `TM.period*`, never `transaction_date.slice(0, 7)`.
+  `calendarMonth()` is only for things that follow the bank (email import
+  ranges). No row = the 1st. Mirrored in `core.mjs` (`periodOf`, `periodBounds`).
 - Uncategorized expenses count toward no budget. Income has no category.
 - Renaming/deleting a category also rewrites `merchant_mapping.category` and
   `bca_transactions.category_override` client-side (`js/rules.js`).

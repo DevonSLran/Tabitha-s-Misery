@@ -137,22 +137,95 @@
       barWidth: Math.min(p, 100) + '%', over: pct >= 1, left: Math.max(limit - spent, 0), overBy: Math.max(spent - limit, 0) };
   }
 
-  /** Position of the "today" tick on progress bars, as a % of the month gone. */
-  function monthProgress(ym, now) {
+  /* ---------- Budget months ----------
+   * A month can start on any day from 1 to 28 (the day money comes in). The
+   * month "2026-11" with start day 15 runs from 15 Nov to 14 Dec. With start
+   * day 1 everything below matches plain calendar months.
+   */
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function isoOf(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function addMonths(ym, n) { const d = parseISO(ym + '-01'); d.setMonth(d.getMonth() + n); return d.getFullYear() + '-' + pad2(d.getMonth() + 1); }
+  const DAY_MS = 864e5;
+  function daysBetween(a, b) { return Math.round((parseISO(b) - parseISO(a)) / DAY_MS); }
+
+  /** Anything outside 1..28 means the 1st. */
+  function startDay(day) {
+    const n = Math.floor(Number(day));
+    return n >= 1 && n <= 28 ? n : 1;
+  }
+
+  /** The month a date counts toward. "2026-11-14" with start day 15 -> "2026-10". */
+  function periodOf(iso, day) {
+    const s = String(iso || '');
+    const ym = s.slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(ym)) return '';
+    return Number(s.slice(8, 10)) >= startDay(day) ? ym : addMonths(ym, -1);
+  }
+
+  /** First and last date of a month, both included: { start, end } as "YYYY-MM-DD". */
+  function periodBounds(ym, day) {
+    const sd = startDay(day);
+    const end = parseISO(addMonths(ym, 1) + '-' + pad2(sd));
+    end.setDate(end.getDate() - 1);
+    return { start: ym + '-' + pad2(sd), end: isoOf(end) };
+  }
+
+  /** The date of day `i` of a month (0 = first day), "YYYY-MM-DD". */
+  function periodDate(ym, day, i) {
+    const d = parseISO(periodBounds(ym, day).start);
+    d.setDate(d.getDate() + i);
+    return isoOf(d);
+  }
+
+  /** How far into its month a date is, 0-based. */
+  function periodDayIndex(iso, ym, day) { return daysBetween(periodBounds(ym, day).start, String(iso).slice(0, 10)); }
+
+  /** "13 Oct" */
+  function dayMonth(iso) { const d = parseISO(iso); return d.getDate() + ' ' + MON[d.getMonth()]; }
+
+  /** "November 2026", or "15 Nov – 14 Dec 2026" when months start later than the 1st. */
+  function periodLabel(ym, day) {
+    if (startDay(day) === 1) return monthLabel(ym);
+    const b = periodBounds(ym, day);
+    return b.start.slice(0, 4) === b.end.slice(0, 4)
+      ? dayMonth(b.start) + ' – ' + dateLong(b.end)
+      : dateLong(b.start) + ' – ' + dateLong(b.end);
+  }
+
+  /** For running copy: "November", or "15 Nov – 14 Dec". */
+  function periodName(ym, day) {
+    if (startDay(day) === 1) return MONTH[parseISO(ym + '-01').getMonth()];
+    const b = periodBounds(ym, day);
+    return dayMonth(b.start) + ' – ' + dayMonth(b.end);
+  }
+
+  /** Position of the "today" tick on progress bars, as a % of the month gone. `day`: month start day (default 1). */
+  function monthProgress(ym, now, day) {
     now = now || new Date();
-    const d = parseISO(ym + '-01');
-    const days = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    if (now.getFullYear() !== d.getFullYear() || now.getMonth() !== d.getMonth()) {
-      return { pct: now > d ? 100 : 0, day: null, days: days, daysLeft: 0 };
+    const b = periodBounds(ym, day);
+    const days = daysBetween(b.start, b.end) + 1;
+    const today = isoOf(now);
+    if (today < b.start || today > b.end) {
+      return { pct: today > b.end ? 100 : 0, day: null, days: days, daysLeft: 0 };
     }
-    const day = now.getDate();
-    return { pct: Math.round((day / days) * 100), day: day, days: days, daysLeft: days - day + 1 };
+    const n = daysBetween(b.start, today) + 1;
+    return { pct: Math.round((n / days) * 100), day: n, days: days, daysLeft: days - n + 1 };
+  }
+
+  /** 1 -> "1st", 15 -> "15th", 22 -> "22nd" */
+  function ordinal(n) {
+    const t = n % 100;
+    if (t >= 11 && t <= 13) return n + 'th';
+    return n + ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th');
   }
 
   global.TM = {
     rp: rp, rpSigned: rpSigned, rpCompact: rpCompact, heroClass: heroClass,
     titleCase: titleCase, splitDescription: splitDescription, suggestKeyword: suggestKeyword,
-    dateLong: dateLong, dateShort: dateShort, monthLabel: monthLabel, monthShort: monthShort, dayGroupLabel: dayGroupLabel,
-    plural: plural, budgetStatus: budgetStatus, monthProgress: monthProgress,
+    dateLong: dateLong, dateShort: dateShort, dayMonth: dayMonth, monthLabel: monthLabel, monthShort: monthShort, dayGroupLabel: dayGroupLabel,
+    plural: plural, ordinal: ordinal, budgetStatus: budgetStatus, monthProgress: monthProgress,
+    startDay: startDay, periodOf: periodOf, periodBounds: periodBounds, periodDate: periodDate, periodDayIndex: periodDayIndex,
+    periodLabel: periodLabel, periodName: periodName,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

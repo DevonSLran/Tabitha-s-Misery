@@ -2,11 +2,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import {
     BUDGET_GROUPS, CATEGORY_ICONS,
     budgetSummary, budgetMap, groupOf, ruleFor, spendingByCategory, budgetRange, overrideFor,
     normaliseTxns, unsortedIn, expensesIn, incomeIn, sumAmounts, isDate, isMonth, NO_END, UNCATEGORIZED,
+    startDay, periodOf, periodBounds, thisMonth, txMonth,
 } from './core.mjs';
+
+// js/format.js is a plain browser script that sets globalThis.TM.
+createRequire(import.meta.url)(new URL('../../../../js/format.js', import.meta.url).pathname);
+const TM = globalThis.TM;
 
 const categories = [
     { id: 1, name: 'Food & Dining', budget_group: 'FOOD', sort_order: 1 },
@@ -111,4 +117,56 @@ test('the function bundle carries an exact copy of js/format.js', () => {
     const a = readFileSync(new URL('../../../../js/format.js', import.meta.url), 'utf8');
     const b = readFileSync(new URL('./format.js', import.meta.url), 'utf8');
     assert.equal(b, a, 'run `npm run sync:fn` to copy js/format.js into supabase/functions/_shared/tm/');
+});
+
+test('month start day: dates count toward the month that started on that day', () => {
+    assert.equal(periodOf('2026-11-14', 15), '2026-10');
+    assert.equal(periodOf('2026-11-15', 15), '2026-11');
+    assert.equal(periodOf('2026-01-03', 15), '2025-12');
+    assert.equal(periodOf('2026-11-01', 1), '2026-11');
+    assert.equal(periodOf('', 15), '');
+    assert.deepEqual(periodBounds('2026-11', 15), { start: '2026-11-15', end: '2026-12-14' });
+    assert.deepEqual(periodBounds('2026-12', 15), { start: '2026-12-15', end: '2027-01-14' });
+    assert.deepEqual(periodBounds('2024-02', 1), { start: '2024-02-01', end: '2024-02-29' });
+    assert.deepEqual(periodBounds('2026-01', 28), { start: '2026-01-28', end: '2026-02-27' });
+    assert.equal(thisMonth(new Date(2026, 10, 14), 15), '2026-10');
+    assert.equal(thisMonth(new Date(2026, 10, 15), 15), '2026-11');
+    assert.equal(startDay(0), 1);
+    assert.equal(startDay(29), 1);
+    assert.equal(startDay('15'), 15);
+});
+
+test('month start day: totals and budgets follow the start day', () => {
+    const list = normaliseTxns([
+        tx(1, '2026-11-14', 10000, 'DB', 'Food & Dining'), // still October's month
+        tx(2, '2026-11-15', 20000, 'DB', 'Food & Dining'),
+        tx(3, '2026-12-14', 30000, 'DB', 'Food & Dining'),
+        tx(4, '2026-12-15', 40000, 'DB', 'Food & Dining'), // December's month
+        tx(5, '2026-11-16', 2500000, 'CR', null),
+    ]);
+    assert.equal(sumAmounts(expensesIn(list, '2026-11', 15)), 50000);
+    assert.equal(sumAmounts(expensesIn(list, '2026-10', 15)), 10000);
+    assert.equal(sumAmounts(incomeIn(list, '2026-11', 15)), 2500000);
+    assert.equal(sumAmounts(expensesIn(list, '2026-11')), 30000); // calendar months by default
+    const budgets = budgetMap([{ grp: 'FOOD', amount: 900000, start_month: '2026-11', end_month: NO_END }]);
+    const s = budgetSummary({ txns: list, categories, budgets, startDay: 15 }, '2026-11');
+    assert.deepEqual(s.budgeted.map(g => [g.key, g.spent, g.limit]), [['FOOD', 50000, 900000]]);
+    assert.equal(budgetSummary({ txns: list, categories, budgets, startDay: 15 }, '2026-10').limit, 0);
+    assert.equal(txMonth(list[0], 15), '2026-12');
+});
+
+test('month start day: core.mjs agrees with js/format.js', () => {
+    const dates = [];
+    for (let d = new Date(Date.UTC(2025, 11, 1)); d < new Date(Date.UTC(2027, 2, 1)); d.setUTCDate(d.getUTCDate() + 1)) dates.push(d.toISOString().slice(0, 10));
+    for (const day of [1, 2, 15, 27, 28]) {
+        for (const iso of dates) assert.equal(periodOf(iso, day), TM.periodOf(iso, day), `${iso} @ ${day}`);
+        for (const ym of ['2025-12', '2026-01', '2026-02', '2026-11', '2026-12', '2027-01']) {
+            assert.deepEqual(periodBounds(ym, day), TM.periodBounds(ym, day), `${ym} @ ${day}`);
+        }
+    }
+    assert.equal(TM.periodLabel('2026-11', 15), '15 Nov – 14 Dec 2026');
+    assert.equal(TM.periodLabel('2026-12', 15), '15 Dec 2026 – 14 Jan 2027');
+    assert.equal(TM.periodLabel('2026-11', 1), 'November 2026');
+    assert.deepEqual(TM.monthProgress('2026-11', new Date(2026, 10, 15), 15), { pct: 3, day: 1, days: 30, daysLeft: 30 });
+    assert.deepEqual(TM.monthProgress('2026-11', new Date(2026, 10, 15)), { pct: 50, day: 15, days: 30, daysLeft: 16 });
 });

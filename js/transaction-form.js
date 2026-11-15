@@ -220,7 +220,7 @@ App.start({
                     ? await dbClient.from('bca_transactions').update(row).eq('id', editId)
                     : await dbClient.from('bca_transactions').insert([row]);
                 if (error) throw error;
-                Month.set(form.date.slice(0, 7)); // land on the month it was filed under
+                Month.set(txMonth({ transaction_date: form.date })); // land on the month it was filed under
                 Flash.set({ message: editId ? 'Saved changes' : `Added ${TM.splitDescription(description).title}`, icon: 'check_circle' });
                 location.replace('activity.html');
             } catch (err) {

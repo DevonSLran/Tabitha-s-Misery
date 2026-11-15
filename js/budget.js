@@ -1,15 +1,36 @@
-/* Budget: monthly limits per budget group, and how this month is tracking. */
+/* Budget: monthly limits per budget group, how this month is tracking, and the day months start on. */
 'use strict';
 
+let mountMonthRender = () => {}; // re-draws the month switcher after the start day changes
+
 function tickHTML(ym) {
-    const p = TM.monthProgress(ym);
+    const p = monthProgress(ym);
     return p.day ? `<span class="bar-tick" style="left: ${p.pct}%" aria-hidden="true"></span>` : '';
+}
+
+/** Last day a budget counts: "Jan 2027", or "14 Feb 2027" when months start later than the 1st. */
+function untilLabel(ym) {
+    return monthStartDay() === 1 ? TM.monthShort(ym) : TM.dateLong(monthBounds(ym).end);
+}
+/** First day a budget counts: "November 2026", or "15 Nov 2026". */
+function fromLabel(ym) {
+    return monthStartDay() === 1 ? TM.monthLabel(ym) : TM.dateLong(monthBounds(ym).start);
 }
 
 function rangeLabel(b, ym) {
     if (b.end === NO_END) return 'every month';
     if (b.start === b.end && b.end === ym) return `${monthName(ym)} only`;
-    return `until ${TM.monthShort(b.end)}`;
+    return `until ${untilLabel(b.end)}`;
+}
+
+/** The "months start on the 15th" line under the budgets. */
+function startDayHTML() {
+    const day = monthStartDay();
+    return `<button type="button" class="flex items-center gap-3 min-h-11 text-left self-start" data-start-day>
+        ${icon('calendar_today', 'text-[20px] text-muted')}
+        <span class="text-body-s text-text-2">${day === 1 ? 'Budget months follow the calendar.' : `Budget months start on the ${TM.ordinal(day)}.`}</span>
+        <span class="link text-body-s whitespace-nowrap">Change</span>
+    </button>`;
 }
 
 function feedsLabel(group) {
@@ -19,7 +40,7 @@ function feedsLabel(group) {
 
 function summaryHTML(ym, sum) {
     const s = TM.budgetStatus(sum.spent, sum.limit);
-    const p = TM.monthProgress(ym);
+    const p = monthProgress(ym);
     const perDay = p.day ? Math.floor(s.left / p.daysLeft) : 0;
     return `<section class="card p-4 md:p-7 flex flex-col md:flex-row md:flex-wrap md:items-center gap-3 md:gap-x-12 md:gap-y-6" aria-label="All budgets">
         <div class="flex flex-col gap-3 md:gap-3.5 md:flex-[2_1_420px] min-w-0">
@@ -92,7 +113,8 @@ function renderBudget() {
             <h2>No limits yet.</h2>
             <p class="tnum">${spent ? `You've spent ${esc(TM.rp(spent))} ${ym === thisMonth() ? 'this month' : `in ${esc(monthName(ym))}`} with nothing to measure it against.` : 'Nothing to measure yet.'} Pick a group, set a monthly limit, and we'll keep score.</p>
             <div class="empty-actions !w-auto"><button type="button" class="btn btn-primary px-5" data-new-budget>${icon('add', 'text-[20px]')}Set your first budget</button></div>
-        </div>`;
+        </div>
+        ${startDayHTML()}`;
         return;
     }
 
@@ -108,7 +130,56 @@ function renderBudget() {
             ${icon('info')}
             <span class="flex-1 tnum">${esc(TM.rp(sumAmounts(loose)))} is uncategorized, so it doesn't count toward any budget yet.</span>
             <span class="font-semibold text-accent-text whitespace-nowrap">Sort ${loose.length} →</span>
-        </a>` : ''}`;
+        </a>` : ''}
+        ${startDayHTML()}`;
+}
+
+/** Pick the day budget months start on, e.g. the day an allowance arrives. */
+function openStartDaySheet() {
+    let day = monthStartDay();
+    const days = Array.from({ length: 28 }, (_, i) => i + 1);
+    const example = (d) => {
+        if (d === 1) return 'Every month runs from the 1st to the last day, like the calendar.';
+        const b = TM.periodBounds(TM.periodOf(todayISO(), d), d);
+        return `Each month runs from the ${TM.ordinal(d)} to the day before the next ${TM.ordinal(d)}. Right now that's ${TM.dateLong(b.start)} to ${TM.dateLong(b.end)}.`;
+    };
+    ui.sheet.open({
+        label: 'Budget month start',
+        html: `<h2 class="sheet-title">When does your month start?</h2>
+            <p class="text-body-s text-text-2 -mt-1.5">Pick the day your money comes in. Home, Activity and Budget all count months from this day.</p>
+            <div class="grid grid-cols-7 gap-1.5" role="radiogroup" aria-label="Day of the month">
+                ${days.map(d => `<button type="button" role="radio" class="chip !px-0 justify-center tnum" data-day="${d}" aria-checked="${d === day}" aria-pressed="${d === day}">${d}</button>`).join('')}
+            </div>
+            <p class="text-caption text-muted" data-day-help></p>
+            <button type="button" class="btn btn-primary btn-lg" data-save-day>Save</button>`,
+        onOpen(sheet) {
+            const render = () => {
+                qsa('[data-day]', sheet).forEach(b => {
+                    const on = Number(b.dataset.day) === day;
+                    b.setAttribute('aria-checked', String(on));
+                    b.setAttribute('aria-pressed', String(on));
+                });
+                qs('[data-day-help]', sheet).textContent = example(day);
+            };
+            render();
+            sheet.addEventListener('click', async (e) => {
+                const b = e.target.closest('[data-day]');
+                if (b) { day = Number(b.dataset.day); render(); return; }
+                const save = e.target.closest('[data-save-day]');
+                if (!save) return;
+                if (day === monthStartDay()) { ui.sheet.close(); return; }
+                setBusy(save, 'Saving…');
+                try {
+                    await saveMonthStartDay(day);
+                    ui.sheet.close();
+                    ui.toast(day === 1 ? 'Months follow the calendar again' : `Months now start on the ${TM.ordinal(day)}`, { icon: 'check_circle' });
+                    mountMonthRender();
+                    renderBudget();
+                    updateRulesBadge();
+                } catch (err) { clearBusy(save); ui.error(errorMessage(err, 'save the start day')); }
+            });
+        },
+    });
 }
 
 /** Set or edit one group's budget. */
@@ -137,9 +208,9 @@ function openBudgetSheet(editGroup, presetGroup) {
             <span class="field-error" data-limit-error hidden></span>
         </div>
         <fieldset class="border-0 p-0 m-0 flex flex-col gap-2">
-            <legend class="field-label">Applies from ${esc(TM.monthLabel(existing && existing.start < ym && period !== 'only' ? existing.start : ym))}</legend>
+            <legend class="field-label">Applies from ${esc(fromLabel(existing && existing.start < ym && period !== 'only' ? existing.start : ym))}</legend>
             <div class="seg grid-cols-3" role="radiogroup" aria-label="How long" data-period>
-                <button type="button" role="radio" data-p="only" aria-checked="${period === 'only'}">${esc(monthAbbr(ym))} only</button>
+                <button type="button" role="radio" data-p="only" aria-checked="${period === 'only'}">${monthStartDay() === 1 ? `${esc(monthAbbr(ym))} only` : 'This one only'}</button>
                 <button type="button" role="radio" data-p="until" aria-checked="${period === 'until'}"><span data-until-label>Until…</span></button>
                 <button type="button" role="radio" data-p="none" aria-checked="${period === 'none'}">No end</button>
             </div>
@@ -159,9 +230,10 @@ function openBudgetSheet(editGroup, presetGroup) {
                 qsa('[data-group]', sheet).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.group === group)));
                 qs('[data-feeds]', sheet).textContent = group ? `Counts spending in: ${feedsLabel(group)}` : 'Pick the group this limit is for.';
                 qsa('[data-p]', sheet).forEach(b => b.setAttribute('aria-checked', String(b.dataset.p === period)));
-                qs('[data-until-label]', sheet).textContent = period === 'until' ? `Until ${TM.monthShort(until)}` : 'Until…';
-                qs('[data-period-help]', sheet).textContent = period === 'only' ? `Only counts in ${TM.monthLabel(ym)}.`
-                    : period === 'until' ? `Every month up to and including ${TM.monthLabel(until)}.` : 'Every month from now on.';
+                qs('[data-until-label]', sheet).textContent = period === 'until'
+                    ? `Until ${monthStartDay() === 1 ? TM.monthShort(until) : TM.dayMonth(monthBounds(until).end)}` : 'Until…';
+                qs('[data-period-help]', sheet).textContent = period === 'only' ? `Only counts in ${monthTitle(ym)}.`
+                    : period === 'until' ? `Every month up to and including ${monthTitle(until)}.` : 'Every month from now on.';
             };
             render();
             bindAmountInput(limit, () => { limit.setAttribute('aria-invalid', 'false'); limitErr.hidden = true; });
@@ -227,7 +299,7 @@ function openBudgetSheet(editGroup, presetGroup) {
 App.start({
     tab: 'budget',
     async init() {
-        mountMonth(() => renderBudget());
+        mountMonthRender = mountMonth(() => renderBudget());
         await Promise.all([loadCategories(), loadBudgets(), loadTransactions()]);
         qs('#main').removeAttribute('aria-busy');
         renderBudget();
@@ -236,7 +308,8 @@ App.start({
             const edit = e.target.closest('[data-edit]');
             if (edit) return openBudgetSheet(edit.dataset.edit);
             const add = e.target.closest('[data-new-budget]');
-            if (add) openBudgetSheet(null, add.dataset.newBudget || null);
+            if (add) return openBudgetSheet(null, add.dataset.newBudget || null);
+            if (e.target.closest('[data-start-day]')) openStartDaySheet();
         });
     },
 });
