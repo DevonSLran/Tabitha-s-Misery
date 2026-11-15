@@ -22,7 +22,7 @@ const dbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const IMPORT_FN_URL = `${SUPABASE_URL}/functions/v1/import-bca-emails`;
 
 // Keep in step with versionName in android/app/build.gradle.
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.3';
 
 const UNCATEGORIZED = 'Uncategorized';
 // budgets.end_month is NOT NULL; this sentinel means "no end".
