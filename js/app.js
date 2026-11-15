@@ -20,9 +20,6 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const dbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const IMPORT_FN_URL = `${SUPABASE_URL}/functions/v1/import-bca-emails`;
-// Shared secret sent as x-import-secret; the function rejects callers without it
-// once IMPORT_SHARED_SECRET is set in the function's env.
-const IMPORT_SECRET = 'n6XUP3iN4vljR31iaZytgQN_1AyvchAw';
 
 // Keep in step with versionName in android/app/build.gradle.
 const APP_VERSION = '1.2';

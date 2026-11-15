@@ -1,7 +1,8 @@
 project_id = "oyexlcmrrhdvsqfbjoif"
 
-# The app invokes this function with the existing Supabase anon key in the
-# Authorization header, so JWT verification stays on (blocks anonymous callers).
+# The app sends the signed-in user's access token in the Authorization header.
+# JWT verification stays on at the gateway, and the function resolves the user
+# with auth.getUser() and rejects callers without a real session.
 [functions.import-bca-emails]
 verify_jwt = true
 
